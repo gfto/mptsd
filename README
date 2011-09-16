@@ -1,0 +1,63 @@
+mptsd
+=====
+mptsd receives mpegts streams from udp/multicast or http and combines them
+into one multiple program stream that is suitable for outputing to DVB-C
+modulator. It is tested with Dektec DTE-3114 Quad QAM Modulator and it
+is used in production in couple of small DVB-C networks.
+
+Installation
+============
+mptsd do not depend on any external libraries. There are two source code
+dependancies that come with mptsd - libfuncs and libtsfuncs.
+
+Documentation
+=============
+mptsd is controlled using command line parameters. Run mptsd to see all of
+the parameters and explanation what every one of them does. Also there
+are 4 configuration files. In the distribution there are example files that
+you can change to suit your needs.
+
+  mptsd.conf          - This file configures the network_id in outputed
+                        NIT table and also MPEG PSI tables playout timeouts.
+
+  mptsd_nit.conf      - Configures NIT table output.
+
+  mptsd_channels.conf - Configure inputs, SDT provider name and transport_stream_id
+
+  mptsd_epg.conf      - Configures EIT current/next tables. This file is auto
+                        reloaded when it is changed. This allows EPG in output
+                        to work.
+
+One mptsd instance should be used for each transponder.
+
+Limitations
+===========
+mptsd do not apply PCR restamping to output. If hardware modulator requires
+correct PCR (most cheap modulators do) it probably won't like what mptsd
+outputs. mptsd was tested and found to be working ok with Dektec DTE-3114.
+
+Development
+===========
+The development is tracked using git. The repository is hosted at github
+to get it, run the following command:
+
+   git clone git://github.com/gfto/mptsd.git
+   git submodule init
+   git submodule update
+
+Compiling
+=========
+After cloning the git repository as described in Development section
+just run `make`.
+
+Releases
+========
+Official releases can be downloaded from tsdecrypt home page which is:
+
+   http://georgi.unixsol.org/programs/mptsd/
+
+Contact
+=======
+For patches, bug reports, complaints and so on send e-mail to:
+
+   Georgi Chorbadzhiyski <georgi@unixsol.org>
