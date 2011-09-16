@@ -1,0 +1,11 @@
+ulimit -c unlimited
+valgrind \
+	--log-file=mptsd-$(date +%F-%H:%M:%S).log \
+	--leak-check=full \
+	--show-reachable=yes \
+	--undef-value-errors=no \
+	--trace-children=yes \
+	--run-libc-freeres=yes \
+	--time-stamp=yes \
+		-- \
+	./mptsd -O 239.78.78.78

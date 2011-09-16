@@ -1,0 +1,8 @@
+mptsd todo
+- Add web access to stats
+- Support rewritting of incomming EIT tables
+- Add live reconfiguration
+  - Adding removing channels
+  - Changing of output address and bitrate
+  - Reloading of nit/eit
+- Add support for schedule eit

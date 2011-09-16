@@ -1,0 +1,149 @@
+#!/bin/sh
+# Server control script
+# Copyright (C) 2007-2010 Unix Solutions Ltd.
+
+PATH="/home/iptv:/bin:/sbin:/usr/bin:/usr/local/bin"
+export PATH
+cd $(dirname $0)
+
+CONFIG="$(basename $0).conf"
+
+if [ ! -r $CONFIG ]
+then
+	echo "[ERROR] $CONFIG is not found."
+	exit 1
+fi
+
+. ./$CONFIG
+
+istart() {
+	echo "[START] Starting $PRGNAME."
+	if [ ! -f "$SERVER" -o ! -x "$SERVER" ]
+	then
+		echo "[ERROR] $SERVER does not exist or it's not executable."
+		exit 1
+	fi
+	if [ -r "$PIDFILE" ]
+	then
+		fpid=$(cat "$PIDFILE" 2>/dev/null)
+		rpid=$(pidof $PRGNAME 2>/dev/null)
+		if [ -n "$rpid" -a "0$fpid" -eq "0$rpid" ]
+		then
+			echo "[ERROR] $PRGNAME is already running: (pid $rpid)"
+			exit 1
+		else
+			echo "[ERROR] $PIDFILE is stale, $PRGNAME is not running. Deleting it pid file."
+			rm $PIDFILE
+		fi
+	fi
+	echo "[CMD  ] $SERVER $PARAMS"
+	cd $(dirname $SERVER)
+	$SERVER $PARAMS
+	if [ $? -eq 0 ]
+	then
+		echo "[OK   ] $PRGNAME started."
+	else
+		echo "[ERROR] $PRGNAME not started."
+	fi
+}
+
+istop() {
+	echo "[STOP ] Stopping $PRGNAME."
+	killall $PRGNAME
+	if [ $? -eq 0 ]
+	then
+		echo -n "[WAIT ] Waiting"
+		echo -n "." && sleep .3
+		echo -n "." && sleep .3
+		echo -n "." && sleep .3
+		echo -n "." && sleep .2
+		echo "."
+		if [ -r "$PIDFILE" ]
+		then
+			RPID=$(pidof $PRGNAME 2>/dev/null)
+			if [ "0$RPID" -ne "0" ]
+			then
+				echo "[ERROR] $PRGNAME is still running: (pid $(cat $PIDFILE)). Kill -9ing it."
+				killall -9 $PRGNAME
+			fi
+		fi
+		echo "[OK   ] $PRGNAME is stopped."
+	fi
+}
+
+icheck() {
+	if [ -r "$PIDFILE" ]
+	then
+		fpid=$(cat "$PIDFILE" 2>/dev/null)
+		rpid=$(pidof $PRGNAME 2>/dev/null)
+		if [ -n "$rpid" -a "0$fpid" -eq "0$rpid" ]
+		then
+			echo "[CHECK] $PRGNAME is already running: (pid $rpid)"
+		else
+			istart
+		fi
+	else
+		echo "[CHECK] Stop and start"
+		istop
+		istart
+	fi
+}
+
+istatus() {
+	rpid=$(pidof $PRGNAME 2>/dev/null)
+	echo "[STATUS] $PRGNAME pidfile pid: $(cat $PIDFILE 2>/dev/null)"
+	echo "[STATUS] $PRGNAME pidof   pid: $rpid"
+	if [ -z "$rpid" ]
+	then
+		echo "[STATUS] $PRGNAME is not running."
+	else
+		if [ -n "$rpid" -a "0$(cat $PIDFILE 2>/dev/null)" -eq "0$rpid" ]
+		then
+			echo "[STATUS] $PRGNAME is running"
+		else
+			echo "[STATUS] $PRGNAME is running but no pid file exist: $PIDFILE"
+		fi
+		ps ax | grep "$PRGNAME -i" | grep -v grep
+	fi
+}
+
+ireconnect() {
+	echo "[RECONN] Sending SIGUSR1 to $PRGNAME causing reconnect"
+	kill -USR1 $(pidof $PRGNAME)
+}
+
+ireload() {
+	echo "[RECONN] Sending SIGHUP to $PRGNAME causing configuration reload"
+	kill -HUP $(pidof $PRGNAME)
+}
+
+case "$1" in
+'start')
+	if [ "$2" != "" ]
+	then
+		sleep "$2"
+	fi
+	istart
+	;;
+'stop')
+	istop
+	;;
+'check')
+	icheck
+	;;
+'status')
+	istatus
+	;;
+'restart')
+	istop
+	istart
+	;;
+'reload')
+	ireload
+	;;
+'reconnect')
+	ireconnect
+	;;
+*)
+	echo "Usage: `basename $0` start|stop|check|restart|reload|reconnect|status"
+esac
