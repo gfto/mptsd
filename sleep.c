@@ -52,7 +52,7 @@ void * calibrate_sleep(void *_config) {
 	}
 
 	if (conf->output_tmout < 0) {
-		LOGf("usleep overhead is to much!! Disabling output rate control.\n");
+		LOGf("usleep overhead is too high! Make sure the kernel is compiled with CONFIG_HIGH_RES_TIMERS.\n");
 		conf->output_tmout = 0;
 	}
 

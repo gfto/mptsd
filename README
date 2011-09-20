@@ -10,6 +10,9 @@ Installation
 mptsd do not depend on any external libraries. There are two source code
 dependancies that come with mptsd - libfuncs and libtsfuncs.
 
+Make sure your kernel has CONFIG_HIGH_RES_TIMERS enabled. Otherwise sleep
+timeout probably won't be able to calibrate itself and mptsd will not work.
+
 Documentation
 =============
 mptsd is controlled using command line parameters. Run mptsd to see all of
