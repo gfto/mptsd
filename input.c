@@ -305,7 +305,8 @@ int in_worktime(int start, int end) {
 void * input_stream(void *self) {
 	INPUT *r = self;
 	INPUT_STREAM *s = &r->stream;
-	char buf[FRAME_PACKET_SIZE];
+	char buffer[RTP_HEADER_SIZE + FRAME_PACKET_SIZE];
+	char *buf = buffer + RTP_HEADER_SIZE;
 
 	signal(SIGPIPE, SIG_IGN);
 
@@ -335,8 +336,9 @@ void * input_stream(void *self) {
 			goto RECONNECT;
 
 		channel_source sproto = get_sproto(r->channel->source);
+		int rtp = is_rtp(r->channel->source);
 
-		if (mpeg_sync(r, sproto) != 0) {
+		if (!rtp && mpeg_sync(r, sproto) != 0) {
 			proxy_log(r, "Can't sync input MPEG TS");
 			sleep(2);
 			goto RECONNECT;
@@ -363,7 +365,13 @@ void * input_stream(void *self) {
 			if (sproto == tcp_sock) {
 				readen = fdread_ex(r->sock, buf, FRAME_PACKET_SIZE, TCP_READ_TIMEOUT, TCP_READ_RETRIES, 1);
 			} else {
-				readen = fdread_ex(r->sock, buf, FRAME_PACKET_SIZE, UDP_READ_TIMEOUT, UDP_READ_RETRIES, 0);
+				if (!rtp) {
+					readen = fdread_ex(r->sock, buf, FRAME_PACKET_SIZE, UDP_READ_TIMEOUT, UDP_READ_RETRIES, 0);
+				} else {
+					readen = fdread_ex(r->sock, buffer, FRAME_PACKET_SIZE + RTP_HEADER_SIZE, UDP_READ_TIMEOUT, UDP_READ_RETRIES, 0);
+					if (readen > RTP_HEADER_SIZE)
+						readen -= RTP_HEADER_SIZE;
+				}
 			}
 
 			if (readen < 0)

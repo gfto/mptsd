@@ -43,6 +43,10 @@ channel_source get_sproto(char *url) {
 	return strncmp(url, "http", 4)==0 ? tcp_sock : udp_sock;
 }
 
+int is_rtp(char *url) {
+	return strncmp(url, "rtp", 3) == 0;
+}
+
 CHANSRC *chansrc_init(char *url) {
 	if (!url)
 		return NULL;
@@ -65,6 +69,7 @@ CHANSRC *chansrc_init(char *url) {
 		src->host  = strdup(host);
 		src->port  = iport ? iport : 80;
 		src->path  = strdup(path);
+		src->rtp   = strcmp(proto, "rtp") == 0;
 		FREE(data);
 		regfree(&re);
 		return src;

@@ -1,7 +1,7 @@
 mptsd
 =====
-mptsd receives mpegts streams from udp/multicast or http and combines them
-into one multiple program stream that is suitable for outputing to DVB-C
+mptsd receives mpegts streams from multicast (udp/rtp) or http and combines
+them into one multiple program stream that is suitable for outputing to DVB-C
 modulator. It is tested with Dektec DTE-3114 Quad QAM Modulator and it
 is used in production in couple of small DVB-C networks.
 

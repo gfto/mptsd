@@ -27,6 +27,8 @@
 /* 7 * 188 */
 #define FRAME_PACKET_SIZE 1316
 
+#define RTP_HEADER_SIZE 12
+
 #include "libfuncs/libfuncs.h"
 
 #include "libtsfuncs/tsdata.h"
@@ -41,6 +43,7 @@ typedef struct {
 	char *host;
 	char *path;
 	unsigned int port;
+	unsigned int rtp;
 } CHANSRC;
 
 #define MAX_CHANNEL_SOURCES 8
@@ -221,6 +224,8 @@ void		channel_free	(CHANNEL **c);
 void		channel_free_epg(CHANNEL *c);
 
 channel_source get_sproto(char *url);
+int is_rtp(char *url);
+
 CHANSRC *	chansrc_init	(char *url);
 void		chansrc_free	(CHANSRC **url);
 void		chansrc_add		(CHANNEL *c, char *src);
