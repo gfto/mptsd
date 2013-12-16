@@ -26,7 +26,7 @@ mptsd_OBJS =  $(FUNCS_LIB) $(TSFUNCS_LIB) \
 	sleep.o network.o \
 	input.o \
 	output_psi.o output_mix.o output_write.o \
-	web_pages.o web_server.o \
+	web_pages.o web_server.o udp_server.o\
 	mptsd.o
 
 PROGS = mptsd

@@ -31,6 +31,7 @@
 #include "input.h"
 #include "output.h"
 #include "web_server.h"
+#include "udp_server.h"
 
 #define PROGRAM_NAME "ux-mptsd"
 
@@ -64,7 +65,7 @@ void spawn_input_threads(CONFIG *conf) {
 			INPUT *nr = input_new(c->name, c);
 			if (nr) {
 				list_add(conf->inputs, nr);
-//				LOGf("SPAWN : %s thread.\n", c->name);
+				LOGf("SPAWN : %s thread.\n", c->name);
 				if (pthread_create(&nr->thread, NULL, &input_stream, nr) == 0) {
 					spawned++;
 					pthread_detach(nr->thread);
@@ -156,6 +157,7 @@ int main(int argc, char **argv) {
 
 	daemonize(config->pidfile);
 	web_server_start(config);
+	udp_server_start(config);
 	log_init(config->logident, config->syslog_active, config->pidfile == NULL, config->loghost, config->logport);
 	init_signals(config);
 
@@ -169,6 +171,7 @@ int main(int argc, char **argv) {
 
 	kill_threads(config);
 	web_server_stop(config);
+	udp_server_stop(config);
 
 	LOGf("SHUTDOWN: Signal %d | %s %s (%s)\n", rcvsig, server_sig, server_ver, config->ident);
 	config_free(&config);

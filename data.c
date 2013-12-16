@@ -121,10 +121,12 @@ void chansrc_set(CHANNEL *c, uint8_t src_id) {
 
 
 
-CHANNEL *channel_new(int service_id, int is_radio, char *id, char *name, char *source) {
+CHANNEL *channel_new(int service_id, int is_radio, char *id, char *name, char *source, int lcn, int is_lcn_visible) {
 	CHANNEL *c = calloc(1, sizeof(CHANNEL));
 	c->service_id = service_id;
 	c->radio = is_radio;
+	c->lcn = lcn;
+	c->lcn_visible = is_lcn_visible;
 	c->base_pid = service_id * 32; // The first pid is saved for PMT
 	c->pmt_pid = c->base_pid; // The first pid is saved for PMT
 	c->id = strdup(id);

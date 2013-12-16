@@ -35,13 +35,20 @@ typedef struct {
 	char			*loghost;
 	int				logport;
 
-	struct sockaddr_in	server;
-	char				*server_addr;
-	int					server_port;
-	int					server_socket;
-	pthread_t			server_thread;
+	struct sockaddr_in		server;
+	char			*server_addr;
+	int				server_port;
+	int				server_socket;
+	pthread_t		server_thread;
+
+	struct sockaddr_in		udp_server;
+	char			*udp_server_addr;
+	int				udp_server_port;
+	int				udp_server_socket;
+	pthread_t		udp_server_thread;
 
 	int				multicast_ttl;
+
 	struct in_addr	output_intf;
 
 	char			*global_conf;
@@ -61,6 +68,10 @@ typedef struct {
 
 	uint16_t		network_id;			// For NIT && SDT
 	uint16_t		transport_stream_id;// For NIT
+	char			*frequency;			// For NIT
+	char			*modulation;		// For NIT
+	char			*symbol_rate;		// For NIT
+
 	char 			*network_name;		// For NIT
 	char 			*provider_name;		// For SDT
 
@@ -94,7 +105,7 @@ void		config_free		(CONFIG **conf);
 void		config_load		(CONFIG *conf, int argc, char **argv);
 
 int			config_load_global		(CONFIG *conf);
-int			config_load_channels	(CONFIG *conf);
+int			config_load_channels		(CONFIG *conf);
 int			config_load_nit			(CONFIG *conf);
 int			config_load_epg			(CONFIG *conf);
 

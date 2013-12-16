@@ -110,6 +110,14 @@ int config_load_channels(CONFIG *conf) {
 	// Parse channels file
 	conf->provider_name = ini_get_string_copy(ini, NULL, "Global:provider_name");
 	conf->transport_stream_id = ini_get_int(ini, 0, "Global:transport_stream_id");
+	conf->frequency = ini_get_string_copy(ini, NULL, "Global:frequency");
+	conf->modulation = ini_get_string_copy(ini, NULL, "Global:modulation");
+	conf->symbol_rate = ini_get_string_copy(ini, NULL, "Global:symbol_rate");
+
+//	conf->epg_source = ini_get_string(ini, NULL, "EPG:source");
+
+
+
 	for (i=1;i<32;i++) {
 		CHANNEL *channel = NULL;
 		int service_id = ini_get_int(ini, 0, "Channel%d:service_id", i);
@@ -117,6 +125,9 @@ int config_load_channels(CONFIG *conf) {
 			continue;
 
 		int is_radio = ini_get_bool(ini, 0, "Channel%d:radio", i);
+		int lcn = ini_get_int(ini, 0, "Channel%d:lcn", i);
+		int is_lcn_visible = ini_get_bool(ini, 0, "Channel%d:lcn_visible", i);
+
 
 		char *id = ini_get_string(ini, NULL, "Channel%d:id", i);
 		if (!id) {
@@ -142,7 +153,7 @@ int config_load_channels(CONFIG *conf) {
 				}
 				// Init channel
 				if (channel == NULL) {
-					channel = channel_new(service_id, is_radio, id, name, source);
+					channel = channel_new(service_id, is_radio, id, name, source, lcn, is_lcn_visible);
 				} else {
 					chansrc_add(channel, source);
 				}
@@ -222,7 +233,7 @@ int config_load_channels(CONFIG *conf) {
 		if (r->cookie != cookie) {
 			proxy_log(r, "Remove");
 			/* Replace channel reference with real object and instruct free_restreamer to free it */
-			r->channel = channel_new(r->channel->service_id, r->channel->radio, r->channel->id, r->channel->name, r->channel->source);
+			r->channel = channel_new(r->channel->service_id, r->channel->radio, r->channel->id, r->channel->name, r->channel->source, r->channel->lcn, r->channel->lcn_visible);
 			r->freechannel = 1;
 			r->dienow = 1;
 		}
@@ -243,7 +254,7 @@ int config_load_global(CONFIG *conf) {
 		LOGf("CONFIG: Error loading global config (%s)\n", conf->global_conf);
 		return 0;
 	}
-	conf->network_id		= ini_get_int(ini, 0,    "Global:network_id");
+	conf->network_id				= ini_get_int(ini, 0,    "Global:network_id");
 	conf->timeouts.pat		= ini_get_int(ini, 100,  "Timeouts:pat");
 	conf->timeouts.pmt		= ini_get_int(ini, 200,  "Timeouts:pmt");
 	conf->timeouts.sdt		= ini_get_int(ini, 500,  "Timeouts:sdt");
@@ -413,6 +424,10 @@ static void show_usage() {
 	puts("Server settings:");
 	puts("\t-b addr\t\tLocal IP address to bind.   (default: 0.0.0.0)");
 	puts("\t-p port\t\tPort to listen.             (default: 0)");
+	puts("UDP Server settings:");
+	puts("\t-s addr\t\tLocal IP address to bind.   (default: 0.0.0.0)");
+	puts("\t-u port\t\tPort to listen.             (default: 2000)");
+
 	puts("\t-d pidfile\tDaemonize with pidfile");
 	puts("\t-l host\t\tSyslog host                 (default: disabled)");
 	puts("\t-L port\t\tSyslog port                 (default: 514)");
@@ -454,8 +469,10 @@ void config_load(CONFIG *conf, int argc, char **argv) {
 	conf->logport = 514;
 	conf->server_port = 0;
 	conf->server_socket = -1;
+	conf->udp_server_port = 2000;
+	conf->udp_server_socket = -1;
 
-	while ((j = getopt(argc, argv, "i:b:p:g:c:n:e:d:t:o:O:P:l:L:B:m:qDHhWE")) != -1) {
+	while ((j = getopt(argc, argv, "i:b:p:s:u:g:c:n:e:d:t:o:O:P:l:L:B:m:qDHhWE")) != -1) {
 		switch (j) {
 			case 'i':
 				conf->ident = strdup(optarg);
@@ -472,6 +489,12 @@ void config_load(CONFIG *conf, int argc, char **argv) {
 				break;
 			case 'p':
 				conf->server_port = atoi(optarg);
+				break;
+			case 's':
+				conf->udp_server_addr = strdup(optarg);
+				break;
+			case 'u':
+				conf->udp_server_port = atoi(optarg);
 				break;
 			case 'd':
 				conf->pidfile = strdup(optarg);
@@ -582,6 +605,9 @@ void config_load(CONFIG *conf, int argc, char **argv) {
 	if (conf->server_port)
 		init_server_socket(conf->server_addr, conf->server_port, &conf->server, &conf->server_socket);
 
+//	if (conf->udp_server_port)
+//		init_server_socket_udp(conf->server_addr, conf->udp_server_port, &conf->server, &conf->udp_server_socket);
+
 	if (!conf->quiet) {
 		printf("Configuration:\n");
 		printf("\tServer ident      : %s\n", conf->ident);
@@ -632,7 +658,8 @@ void config_load(CONFIG *conf, int argc, char **argv) {
 	if (!config_load_channels(conf))
 		goto ERR;
 
-	config_load_epg(conf);
+	if (!config_load_epg(conf))
+		LOGf("CONFIG: Run without EIT (%s)\n", conf->epg_conf);
 
 	return;
 

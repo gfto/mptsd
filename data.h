@@ -63,6 +63,8 @@ typedef struct {
 	int			service_id;
 	int			pmt_pid;
 	int			radio;
+	int			lcn;
+	int			lcn_visible;
 	char *		id;
 	char *		name;
 	/* Sources */
@@ -219,7 +221,7 @@ EPG_ENTRY *	epg_new			(time_t start, int duration, char *encoding, char *event, 
 void		epg_free		(EPG_ENTRY **e);
 int			epg_changed		(EPG_ENTRY *a, EPG_ENTRY *b);
 
-CHANNEL *	channel_new		(int service_id, int is_radio, char *id, char *name, char *source);
+CHANNEL *	channel_new		(int service_id, int is_radio, char *id, char *name, char *source, int lcn, int is_lcn_visible);
 void		channel_free	(CHANNEL **c);
 void		channel_free_epg(CHANNEL *c);
 
@@ -245,6 +247,7 @@ void		obuf_reset			(OBUF *ob);
 
 NIT *		nit_new			(uint16_t ts_id, char *freq, char *modulation, char *symbol_rate);
 void		nit_free		(NIT **nit);
+
 
 void		proxy_log		(INPUT *r, char *msg);
 void		proxy_close		(LIST *inputs, INPUT **input);

@@ -29,6 +29,7 @@
 
 static void output_psi_init_pat(CONFIG *conf, OUTPUT *o) {
 	LNODE *lc, *lctmp;
+
 	o->pat = ts_pat_alloc_init(conf->transport_stream_id);
 	list_lock(conf->channels);
 	list_for_each(conf->channels, lc, lctmp) {
@@ -44,37 +45,60 @@ static void output_psi_init_nit(CONFIG *conf, OUTPUT *o) {
 
 	ts_nit_add_network_name_descriptor(nit, conf->network_name);
 
+	int num;
+	LNODE *lc, *lctmp;
+
+	uint32_t *svc_services = malloc(conf->channels->items * sizeof(uint32_t));
+	uint32_t *lcn_services = malloc(conf->channels->items * sizeof(uint32_t));
+
+	num = 0;
+
+	list_lock(conf->channels);
+
+	list_for_each(conf->channels, lc, lctmp) {
+			CHANNEL *c = lc->data;
+			uint32_t srv = 0;
+			srv  = (c->service_id &~ 0x00ff) << 24;
+			srv |= (c->service_id &~ 0xff00) << 16;
+			srv |= (c->lcn_visible ? 0x01 : 0x00 &~ 0xf0 ) << 15;
+			srv |= (0X00 &~ 0xf0 ) << 14;
+			srv |= (c->lcn &~ 0xc0ff);
+			srv |= (c->lcn &~ 0xff00);
+			lcn_services[num++] = srv;
+	}
+
+	list_unlock(conf->channels);
+
+	num = 0;
+
+	list_lock(conf->channels);
+    list_for_each(conf->channels, lc, lctmp) {
+             CHANNEL *c = lc->data;
+             uint32_t srv = 0;
+             srv  = (c->service_id &~ 0x00ff) << 16;
+             srv |= (c->service_id &~ 0xff00) << 8;
+             srv |= c->radio ? 0x02 : 0x01;
+             svc_services[num++] = srv;
+    }
+
+	list_unlock(conf->channels);
+
+    NIT *ts_ndata = nit_new(conf->transport_stream_id, conf->frequency, conf->modulation, conf->symbol_rate);
+
+	ts_nit_add_stream_descriptors(nit, ts_ndata->ts_id, conf->network_id, ts_ndata->_freq, ts_ndata->_modulation, ts_ndata->_symbol_rate, lcn_services, svc_services, num);
+
 	if (conf->nit->items < 64) {
-		int num;
-		LNODE *lc, *lctmp;
-		uint32_t *freqs = malloc(conf->nit->items * sizeof(uint32_t));
-		uint32_t *services = malloc(conf->channels->items * sizeof(uint32_t));
-		num = 0;
 		list_lock(conf->nit);
-		list_for_each(conf->nit, lc, lctmp) {
-			NIT *ndata = lc->data;
-			freqs[num++] = ndata->_freq;
-		}
-		ts_nit_add_frequency_list_descriptor_cable(nit, conf->transport_stream_id, conf->network_id, freqs, num);
-		list_for_each(conf->nit, lc, lctmp) {
+			list_for_each(conf->nit, lc, lctmp) {
 			NIT *ndata = lc->data;
 			ts_nit_add_cable_delivery_descriptor(nit, ndata->ts_id, conf->network_id, ndata->_freq, ndata->_modulation, ndata->_symbol_rate);
 		}
+
 		list_unlock(conf->nit);
-		num = 0;
-		list_lock(conf->channels);
-		list_for_each(conf->channels, lc, lctmp) {
-			CHANNEL *c = lc->data;
-			uint32_t srv = 0;
-			srv  = (c->service_id &~ 0x00ff) << 16;
-			srv |= (c->service_id &~ 0xff00) << 8;
-			srv |= c->radio ? 0x02 : 0x01;
-			services[num++] = srv;
-		}
-		list_unlock(conf->channels);
-		ts_nit_add_service_list_descriptor(nit, conf->transport_stream_id, conf->network_id, services, num);
-		free(freqs);
-		free(services);
+
+		free(lcn_services);
+		free(svc_services);
+
 	} else {
 		LOG("CONF  : Too much items in the NIT, maximum is 64! NIT not generated.\n");
 	}
@@ -192,7 +216,7 @@ static void __output_add_eit(OUTPUT *o, struct ts_eit *eit) {
 		o->pid_eit_cont += eit->section_header->num_packets;
 		cbuf_fill(o->psibuf, eit->section_header->packet_data, eit->section_header->num_packets * TS_PACKET_SIZE);
 	}
-//	ts_eit_dump(eit);
+	ts_eit_dump(eit);
 }
 
 static void output_add_eit(CONFIG *conf, OUTPUT *o) {
