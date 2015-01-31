@@ -351,9 +351,9 @@ NIT *nit_new(uint16_t ts_id, char *freq, char *mod, char *symbol_rate) {
 	char tmp[9];
 	unsigned i, pos;
 
-	NIT *n = calloc(1, sizeof(NIT));
 	if (strlen(freq) != 9 || strlen(symbol_rate) != 8)
 		return NULL;
+	NIT *n = calloc(1, sizeof(NIT));
 	n->freq        = strdup(freq);
 	n->modulation  = strdup(mod);
 	n->symbol_rate = strdup(symbol_rate);
