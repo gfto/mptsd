@@ -607,8 +607,6 @@ dictionary * iniparser_load(const char * ininame)
             /* Multi-line value */
             last=len ;
             continue ;
-        } else {
-            last=0 ;
         }
         switch (iniparser_line(line, section, key, val)) {
             case LINE_EMPTY:
