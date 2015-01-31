@@ -117,7 +117,6 @@ void * output_handle_write(void *_config) {
 	CONFIG *conf = _config;
 	OUTPUT *o = conf->output;
 	int buf_in_use = 0;
-	unsigned int o_datasize = 0;
 	struct timeval stats_ts, now;
 	struct timeval start_write_ts, end_write_ts, used_ts;
 	unsigned long long stats_interval;
@@ -157,7 +156,6 @@ void * output_handle_write(void *_config) {
 			}
 			o->traffic_period = 0;
 			o->padding_period = 0;
-			o_datasize = 0;
 		}
 
 		gettimeofday(&start_write_ts, NULL);

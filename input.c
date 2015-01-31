@@ -284,9 +284,8 @@ int in_worktime(int start, int end) {
 	if (!start && !end)
 		return 1;
 	struct tm ltime;
-	struct tm *ltimep = &ltime;
 	time_t timep = time(NULL);
-	ltimep = localtime_r(&timep, ltimep);
+	localtime_r(&timep, &ltime);
 	int seconds = ltime.tm_sec + ltime.tm_min * 60 + ltime.tm_hour * 3600;
 	if (start > end) {
 		if (start >= seconds && end < seconds)
