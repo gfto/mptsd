@@ -73,9 +73,9 @@ void config_free(CONFIG **pconf) {
 	if (conf) {
 		conf->output->dienow = 1;
 
-		list_free(&conf->nit, NULL, nit_free);
-		list_free(&conf->inputs, NULL, input_free);
-		list_free(&conf->channels, NULL, channel_free);
+		list_free(&conf->nit, NULL, (void (*)(void **))nit_free);
+		list_free(&conf->inputs, NULL, (void (*)(void **))input_free);
+		list_free(&conf->channels, NULL, (void (*)(void **))channel_free);
 		output_free(&conf->output);
 
 		FREE(conf->ident);
@@ -230,7 +230,7 @@ int config_load_channels(CONFIG *conf) {
 	list_unlock(conf->inputs);
 
 	/* Free old_channels */
-	list_free(&old_channels, NULL, channel_free);
+	list_free(&old_channels, NULL, (void (*)(void **))channel_free);
 
 	LOGf("CONFIG: %d channels loaded\n", num_channels);
 	return num_channels;
