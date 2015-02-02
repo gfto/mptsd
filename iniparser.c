@@ -488,7 +488,6 @@ static line_status iniparser_line(
     strcpy(line, strstrip(input_line));
     len = (int)strlen(line);
 
-    sta = LINE_UNPROCESSED ;
     if (len<1) {
         /* Empty line */
         sta = LINE_EMPTY ;
