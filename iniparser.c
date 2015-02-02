@@ -523,7 +523,9 @@ static line_status iniparser_line(
          * key=;
          * key=#
          */
-        strcpy(key, strstrip(key));
+        char *skey = strstrip(key);
+        if (skey)
+            strcpy(key, skey);
         strcpy(key, strlwc(key));
         value[0]=0 ;
         sta = LINE_VALUE ;
