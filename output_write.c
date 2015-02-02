@@ -21,6 +21,7 @@
 #include <sys/time.h>
 #include <errno.h>
 #include <math.h>
+#include <inttypes.h>
 
 #include "libfuncs/io.h"
 #include "libfuncs/log.h"
@@ -75,7 +76,7 @@ void ts_frame_process(CONFIG *conf, OUTPUT *o, uint8_t *data) {
 					if (conf->debug) {
 						uint64_t ts_rate = (double)(((bytes - old_bytes) * 8) * 27000000) / (pcr - old_org_pcr);
 						uint64_t ts_rate_new = (double)(((bytes - old_bytes) * 8) * 27000000) / (new_pcr - old_pcr);
-						LOGf("PCR[%03x]: old:%14llu new:%14llu pcr_diff:%8lld ts_rate:%9llu ts_rate_new:%9llu diff:%9lld | passed:%llu\n",
+						LOGf("PCR[%03x]: old:%14" PRIu64 " new:%14" PRIu64 " pcr_diff:%8" PRId64 " ts_rate:%9" PRIu64 " ts_rate_new:%9" PRIu64 " diff:%9" PRId64 " | passed:%" PRIu64 "\n",
 							pid,
 							pcr,
 							new_pcr,
@@ -147,7 +148,7 @@ void * output_handle_write(void *_config) {
 			double opadding = ((double)o->padding_period / o->traffic_period) * 100;
 
 			if (!conf->quiet) {
-				LOGf("STAT  : Pad:%6.2f%% Traf:%5.2f Mbps | %8.2f | %7llu\n",
+				LOGf("STAT  : Pad:%6.2f%% Traf:%5.2f Mbps | %8.2f | %7" PRIu64 "\n",
 					opadding,
 					out_mbps,
 					out_kbps,
