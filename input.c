@@ -182,7 +182,7 @@ int process_pat(INPUT *r, uint16_t pid, uint8_t *ts_packet) {
 	// Process PAT
 	s->pat = ts_pat_push_packet(s->pat, ts_packet);
 
-	s->last_pat = ts_pat_push_packet(s->last_pat, ts_packet);
+	
 	if (s->last_pat->initialized) {
 		if (!ts_pat_is_same(s->pat, s->last_pat)) {
 			proxy_log(r, "PAT changed.");
@@ -191,7 +191,7 @@ int process_pat(INPUT *r, uint16_t pid, uint8_t *ts_packet) {
 		ts_pat_free(&s->last_pat);
 		s->last_pat = ts_pat_alloc();
 	}
-
+    s->last_pat = ts_pat_push_packet(s->last_pat, ts_packet);
 	if (s->pat->initialized) {
 		// PMT pid is still unknown
 		if (!s->pmt_pid) {
