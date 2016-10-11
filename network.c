@@ -170,7 +170,7 @@ int connect_source(INPUT *r, int retries, int readbuflen, int *http_code) {
 				regcomp(&http_response, "^HTTP/1.[0-1] (([0-9]{3}) .*)", REG_EXTENDED);
 				if (regexec(&http_response,buf,3,res,0) != REG_NOMATCH) {
 					char codestr[4];
-					if ((unsigned int)res[1].rm_eo-res[1].rm_so < sizeof(xresponse)) {
+					if ((unsigned int)res[1].rm_eo-res[1].rm_so < (unsigned int)sizeof(xresponse)) {
 						strncpy(xresponse, &buf[res[1].rm_so], res[1].rm_eo-res[1].rm_so);
 						xresponse[res[1].rm_eo-res[1].rm_so] = '\0';
 						chomp(xresponse);

@@ -134,7 +134,7 @@ void signal_quit(int sig) {
 	keep_going = 0;
 }
 
-void init_signals() {
+void init_signals(void) {
 	signal(SIGCHLD, SIG_IGN);
 	signal(SIGPIPE, SIG_IGN);
 
@@ -157,7 +157,7 @@ int main(int argc, char **argv) {
 	daemonize(config->pidfile);
 	web_server_start(config);
 	log_init(config->logident, config->syslog_active, config->pidfile == NULL, config->loghost, config->logport);
-	init_signals(config);
+	init_signals();
 
 	LOGf("INIT  : %s %s (%s)\n" , server_sig, server_ver, config->ident);
 
