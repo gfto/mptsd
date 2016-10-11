@@ -13,7 +13,12 @@ endif
 RM = /bin/rm -f
 Q = @
 
+uname_S := $(shell sh -c 'uname -s 2>/dev/null || echo not')
+ifeq ($(uname_S),Darwin)
+LIBS = -lpthread -lm
+else
 LIBS = -lpthread -lm -lrt
+endif
 
 FUNCS_DIR = libfuncs
 FUNCS_LIB = $(FUNCS_DIR)/libfuncs.a
