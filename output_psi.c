@@ -96,7 +96,7 @@ static void output_psi_init_sdt(CONFIG *conf, OUTPUT *o) {
 }
 
 static void output_psi_init_tdt_tot(CONFIG *conf, OUTPUT *o) {
-	conf = conf; // Silence warning
+	(void)conf; // Silence warning
 	o->pid_tdt_cont = 15;
 	o->tdt = ts_tdt_alloc_init(time(NULL));
 	o->tot = ts_tot_alloc_init(time(NULL));

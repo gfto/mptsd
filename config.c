@@ -403,7 +403,7 @@ int config_load_epg(CONFIG *conf) {
 
 extern char *program_id;
 
-static void show_usage() {
+static void show_usage(void) {
 	printf("%s\n", program_id);
 	puts(copyright);
 	puts("");
@@ -545,7 +545,7 @@ void config_load(CONFIG *conf, int argc, char **argv) {
 				break;
 			case 'H':
 			case 'h':
-				show_usage(0);
+				show_usage();
 				exit(0);
 				break;
 		}
