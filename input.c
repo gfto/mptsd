@@ -185,7 +185,7 @@ int process_pat(INPUT *r, uint16_t pid, uint8_t *ts_packet) {
 	
 	if (s->last_pat->initialized) {
 		if (!ts_pat_is_same(s->pat, s->last_pat)) {
-			proxy_log(r, "PAT changed.");
+			proxy_log(r, "========================PAT changed.========================");
 			return -1; // Reconnect
 		}
 		ts_pat_free(&s->last_pat);
@@ -243,15 +243,17 @@ int process_pmt(INPUT *r, uint16_t pid, uint8_t *ts_packet) {
 
 	s->pmt = ts_pmt_push_packet(s->pmt, ts_packet);
 
-	s->last_pmt = ts_pmt_push_packet(s->last_pmt, ts_packet);
+	
 	if (s->last_pmt->initialized) {
 		if (!ts_pmt_is_same(s->pmt, s->last_pmt)) {
-			proxy_log(r, "PMT changed.");
+			proxy_log(r, "========================PMT changed.========================");
 			return -2; // Reconnect
 		}
 		ts_pmt_free(&s->last_pmt);
 		s->last_pmt = ts_pmt_alloc();
 	}
+
+    s->last_pmt = ts_pmt_push_packet(s->last_pmt, ts_packet);
 
 	if (s->pmt->initialized) {
 		if (!s->pmt_rewritten || !s->pmt_rewritten->initialized) {
