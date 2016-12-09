@@ -191,7 +191,7 @@ int process_pat(INPUT *r, uint16_t pid, uint8_t *ts_packet) {
 		ts_pat_free(&s->last_pat);
 		s->last_pat = ts_pat_alloc();
 	}
-    s->last_pat = ts_pat_push_packet(s->last_pat, ts_packet);
+	s->last_pat = ts_pat_push_packet(s->last_pat, ts_packet);
 	if (s->pat->initialized) {
 		// PMT pid is still unknown
 		if (!s->pmt_pid) {
@@ -253,7 +253,7 @@ int process_pmt(INPUT *r, uint16_t pid, uint8_t *ts_packet) {
 		s->last_pmt = ts_pmt_alloc();
 	}
 
-    s->last_pmt = ts_pmt_push_packet(s->last_pmt, ts_packet);
+	s->last_pmt = ts_pmt_push_packet(s->last_pmt, ts_packet);
 
 	if (s->pmt->initialized) {
 		if (!s->pmt_rewritten || !s->pmt_rewritten->initialized) {

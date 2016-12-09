@@ -134,7 +134,7 @@ CHANNEL *channel_new(int service_id, int is_radio, const char *id, const char *n
 	CHANNEL *c = calloc(1, sizeof(CHANNEL));
 	c->service_id = service_id;
 	c->radio = is_radio;
-    c->index = channel_index;
+	c->index = channel_index;
 	c->base_pid = c->index * 32; // The first pid is saved for PMT , channel_index must > 0
 	c->pmt_pid = c->base_pid; // The first pid is saved for PMT
 	c->id = strdup(id);

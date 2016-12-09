@@ -59,7 +59,7 @@ typedef struct {
 
 typedef struct {
 	/* Config */
-    int         index;
+	int			index;
 	int			base_pid;
 	int			service_id;
 	int			pmt_pid;
