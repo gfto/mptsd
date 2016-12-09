@@ -59,6 +59,7 @@ typedef struct {
 
 typedef struct {
 	/* Config */
+    int         index;
 	int			base_pid;
 	int			service_id;
 	int			pmt_pid;
@@ -219,7 +220,7 @@ EPG_ENTRY *	epg_new			(time_t start, int duration, char *encoding, char *event, 
 void		epg_free		(EPG_ENTRY **e);
 int			epg_changed		(EPG_ENTRY *a, EPG_ENTRY *b);
 
-CHANNEL *	channel_new		(int service_id, int is_radio, char *id, char *name, char *source);
+CHANNEL *	channel_new		(int service_id, int is_radio, const char *id, const char *name, const char *source, int channel_index);
 void		channel_free	(CHANNEL **c);
 void		channel_free_epg(CHANNEL *c);
 
@@ -228,7 +229,7 @@ int is_rtp(char *url);
 
 CHANSRC *	chansrc_init	(char *url);
 void		chansrc_free	(CHANSRC **url);
-void		chansrc_add		(CHANNEL *c, char *src);
+void		chansrc_add		(CHANNEL *c, const char *src);
 void		chansrc_next	(CHANNEL *c);
 void		chansrc_set		(CHANNEL *c, uint8_t src_id);
 
