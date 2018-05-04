@@ -47,6 +47,8 @@ to get it, run the following command:
    git clone git://github.com/gfto/mptsd.git
    git submodule init
    git submodule update
+     OR
+   git submodule update --recursive --remote  // if you like to checkout HEAD submodules.
 
 Compiling
 =========
