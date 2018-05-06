@@ -34,7 +34,11 @@
 
 #define PROGRAM_NAME "ux-mptsd"
 
+#ifdef BUILD_ID
 const char *program_id = PROGRAM_NAME " " GIT_VER " build " BUILD_ID;
+#else
+const char *program_id = PROGRAM_NAME " " GIT_VER;
+#endif
 
 char *server_sig = PROGRAM_NAME;
 char *server_ver = GIT_VER;
