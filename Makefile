@@ -1,11 +1,12 @@
-CC = $(CROSS)$(TARGET)gcc
+CC? = $(CROSS)$(TARGET)gcc
 STRIP = $(CROSS)$(TARGET)strip
 VERSION="v1.1"
 ifndef REPRODUCIBLE_BUILD
 BUILD_ID = $(shell date +%F_%R)
 GIT_VER = $(shell git describe --tags --dirty --always 2>/dev/null)
 endif
-CFLAGS = -ggdb -Wall -Wextra -Wshadow -Wformat-security -Wno-strict-aliasing -O2 -D_GNU_SOURCE -DBUILD_ID=\"$(BUILD_ID)\"
+CFLAGS ?= -ggdb -O2
+CFLAGS += -Wall -Wextra -Wshadow -Wformat-security -Wno-strict-aliasing -D_GNU_SOURCE -DBUILD_ID=\"$(BUILD_ID)\"
 ifneq "$(GIT_VER)" ""
 CFLAGS += -DGIT_VER=\"$(GIT_VER)\"
 else

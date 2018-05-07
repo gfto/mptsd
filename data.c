@@ -88,7 +88,7 @@ void chansrc_free(CHANSRC **purl) {
 	}
 };
 
-void chansrc_add(CHANNEL *c, char *src) {
+void chansrc_add(CHANNEL *c, const char *src) {
 	if (c->num_src >= MAX_CHANNEL_SOURCES-1)
 		return;
 	c->sources[c->num_src] = strdup(src);
@@ -121,15 +121,27 @@ void chansrc_set(CHANNEL *c, uint8_t src_id) {
 
 
 
-CHANNEL *channel_new(int service_id, int is_radio, char *id, char *name, char *source) {
+CHANNEL *channel_new(int service_id, int is_radio, const char *id, const char *name, const char *source, int channel_index){
+
+    if (channel_index<=0 || channel_index>=256)
+    {
+        
+	    LOGf("CONFIG: Error channel_new invalid index %d\n", channel_index);
+        return NULL;
+    }
+    //LOGf("CONFIG: ------------------channel_new() serviceid %d id %s name %s source %s index %d\n", service_id, id, name , source , channel_index);
+    
 	CHANNEL *c = calloc(1, sizeof(CHANNEL));
 	c->service_id = service_id;
 	c->radio = is_radio;
-	c->base_pid = service_id * 32; // The first pid is saved for PMT
+	c->index = channel_index;
+	c->base_pid = c->index * 32; // The first pid is saved for PMT , channel_index must > 0
 	c->pmt_pid = c->base_pid; // The first pid is saved for PMT
 	c->id = strdup(id);
 	c->name = strdup(name);
 	chansrc_add(c, source);
+
+
 	return c;
 }
 
