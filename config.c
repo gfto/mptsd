@@ -142,7 +142,7 @@ int config_load_channels(CONFIG *conf) {
 				}
 				// Init channel
 				if (channel == NULL) {
-					channel = channel_new(service_id, is_radio, id, name, source);
+					channel = channel_new(service_id, is_radio, id, name, source, i);
 				} else {
 					chansrc_add(channel, source);
 				}
@@ -222,7 +222,7 @@ int config_load_channels(CONFIG *conf) {
 		if (r->cookie != cookie) {
 			proxy_log(r, "Remove");
 			/* Replace channel reference with real object and instruct free_restreamer to free it */
-			r->channel = channel_new(r->channel->service_id, r->channel->radio, r->channel->id, r->channel->name, r->channel->source);
+			r->channel = channel_new(r->channel->service_id, r->channel->radio, r->channel->id, r->channel->name, r->channel->source, r->channel->index);
 			r->freechannel = 1;
 			r->dienow = 1;
 		}
