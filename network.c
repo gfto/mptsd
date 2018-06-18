@@ -153,7 +153,7 @@ int connect_source(INPUT *r, int retries, int readbuflen, int *http_code) {
 			DO_RECONNECT;
 		}
 
-		snprintf(buf,sizeof(buf)-1, "GET /%s HTTP/1.0\nHost: %s:%u\nX-Smart-Client: yes\nUser-Agent: %s %s (%s)\n\n",
+		snprintf(buf,sizeof(buf)-1, "GET /%s HTTP/1.0\r\nHost: %s:%u\r\nX-Smart-Client: yes\r\nUser-Agent: %s %s (%s)\r\n\r\n"	
 		         src->path, src->host, src->port, server_sig, server_ver, config->ident);
 		buf[sizeof(buf)-1] = 0;
 		fdwrite(r->sock, buf, strlen(buf));
