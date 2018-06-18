@@ -184,9 +184,10 @@ int process_pat(INPUT *r, uint16_t pid, uint8_t *ts_packet) {
 
 	
 	if (s->last_pat->initialized) {
+		if (!s->pat->initialized) return -1;  // Incomplete
 		if (!ts_pat_is_same(s->pat, s->last_pat)) {
 			proxy_log(r, "========================PAT changed.========================");
-			return -1; // Reconnect
+			return -2; // Reconnect
 		}
 		ts_pat_free(&s->last_pat);
 		s->last_pat = ts_pat_alloc();
@@ -197,7 +198,7 @@ int process_pat(INPUT *r, uint16_t pid, uint8_t *ts_packet) {
 		if (!s->pmt_pid) {
 			if (!input_process_pat(r)) {
 				proxy_log(r, "Can't parse PAT to find PMT pid.");
-				return -1;
+				return -2;
 			}
 		}
 		// Rewritten PAT is not yet initialized
@@ -245,6 +246,7 @@ int process_pmt(INPUT *r, uint16_t pid, uint8_t *ts_packet) {
 
 	
 	if (s->last_pmt->initialized) {
+		if (!s->pmt->initialized) return -1;  // Incomplete
 		if (!ts_pmt_is_same(s->pmt, s->last_pmt)) {
 			proxy_log(r, "========================PMT changed.========================");
 			return -2; // Reconnect
@@ -394,13 +396,16 @@ void * input_stream(void *self) {
 				uint8_t *ts_packet = (uint8_t *)buf + i;
 				uint16_t pid = ts_packet_get_pid(ts_packet);
 
-				if (process_pat(r, pid, ts_packet) < 0)
+				int pat_result = process_pat(r, pid, ts_packet);
+				if (pat_result == -2)
 					goto RECONNECT;
+				if (pat_result < 0) // PAT incomplete
+					continue;
 
 				int pmt_result = process_pmt(r, pid, ts_packet);
 				if (pmt_result == -2)
 					goto RECONNECT;
-				if (pmt_result < 0) // PMT rewritten
+				if (pmt_result < 0) // PMT rewritten or incomplete
 					continue;
 
 				pid = ts_packet_get_pid(ts_packet);
