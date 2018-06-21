@@ -172,28 +172,14 @@ void * output_handle_mix(void *_config) {
 							r->outputed_packets = 0;
 						}
 						data = cbuf_get(r->buf, TS_PACKET_SIZE, &data_size);
-						if (data_size == TS_PACKET_SIZE) { // We have our data, no need to look at other inputs
-							if (ts_packet_get_pid(data) < 0x1fff)
-								break;
-							else { // Remove padding
-								data = NULL;
-								data_size = 0;
-								continue;
-							}
-						}
+						if (data_size == TS_PACKET_SIZE) // We have our data, no need to look at other inputs
+							break;
 					}
 				// Do not move PCRs
 				} else {
 					data = cbuf_get(r->buf, TS_PACKET_SIZE, &data_size);
-					if (data_size == TS_PACKET_SIZE) { // We have our data, no need to look at other inputs
-						if (ts_packet_get_pid(data) < 0x1fff)
-							break;
-						else { // Remove padding
-							data = NULL;
-							data_size = 0;
-							continue;
-						}
-					}
+					if (data_size == TS_PACKET_SIZE) // We have our data, no need to look at other inputs
+						break;
 				}
 			} // while (inputs_left--)
 
