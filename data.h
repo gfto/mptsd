@@ -240,7 +240,7 @@ void		input_stream_reset	(INPUT *input);
 
 OUTPUT *	output_new			();
 void		output_free			(OUTPUT **output);
-void		output_open_file	(OUTPUT *o);
+void		output_open_file	(char *filename, OUTPUT *o);
 void		output_buffer_alloc	(OUTPUT *o, double output_bitrate);
 void		obuf_reset			(OBUF *ob);
 
