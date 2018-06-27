@@ -90,6 +90,7 @@ void * output_handle_mix(void *_config) {
 
 		curbuf->status = obuf_filling; // Mark buffer as being filled
 
+		unsigned int nulls=0, null_packets_count = o_maxpackets - packets;
 		if (conf->debug) {
 			LOGf("MIX[%2d]: Data:%6u | Bufsz:%6d | Packs:%4u | D/N:%5.2f/%5.2f\n",
 				buf_in_use,
@@ -99,17 +100,17 @@ void * output_handle_mix(void *_config) {
 				((double)packets / o_maxpackets) * 100,
 				(double)100 - ((double)packets / o_maxpackets) * 100
 			);
-			LOGf("datapacks:%5d maxpacks:%5d null:%5d (%5.2f) | null_per_data:%5.2f data_per_null:%5.2f\n",
+			LOGf("datapacks:%5d maxpacks:%5d null:%5d (%5.2f) | null_per_data:%5.2f data_per_null:%5.2f | null_packets_count:%u\n",
 				packets,
 				o_maxpackets,
 				o_maxpackets-packets,
 				100-((double)packets / o_maxpackets)*100,
 				null_per_data,
-				data_per_null
+				data_per_null,
+				null_packets_count
 			);
 		}
 
-		unsigned int nulls=0, null_packets_count = o_maxpackets - packets;
 		// The is no data in the input buffer, send only NULLs
 		if (null_packets_count == o_maxpackets) {
 			// Increase sended packets
@@ -134,6 +135,7 @@ void * output_handle_mix(void *_config) {
 
 			// Loop over inputs
 			int inputs_left = conf->inputs->items;
+			int read_count = 0;
 			while (inputs_left--) {
 				inpt = inpt->next;
 				INPUT *r = inpt->data;
@@ -151,6 +153,7 @@ void * output_handle_mix(void *_config) {
 							if (r->output_pcr_packets_needed > 0 && r->outputed_packets < r->output_pcr_packets_needed) {
 								data = NULL;
 								data_size = 0;
+								read_count++;
 								continue;
 							}
 /*
@@ -171,17 +174,38 @@ void * output_handle_mix(void *_config) {
 								r->output_pcr_packets_needed = round(conf->output_bitrate / 8 * (r->output_pcr - r->output_last_pcr) / 27000000 / 188);
 							r->outputed_packets = 0;
 						}
+						read_count++;
 						data = cbuf_get(r->buf, TS_PACKET_SIZE, &data_size);
-						if (data_size == TS_PACKET_SIZE) // We have our data, no need to look at other inputs
-							break;
+						if (data_size == TS_PACKET_SIZE) { // We have our data, no need to look at other inputs
+							if (ts_packet_get_pid(data) < 0x1fff)
+								break;
+							else { // Remove padding
+								data = NULL;
+								data_size = 0;
+								continue;
+							}
+						}
 					}
 				// Do not move PCRs
 				} else {
+					read_count++;
 					data = cbuf_get(r->buf, TS_PACKET_SIZE, &data_size);
-					if (data_size == TS_PACKET_SIZE) // We have our data, no need to look at other inputs
-						break;
+					if (data_size == TS_PACKET_SIZE) {// We have our data, no need to look at other inputs
+						if (ts_packet_get_pid(data) < 0x1fff)
+							break;
+						else { // Remove padding
+							data = NULL;
+							data_size = 0;
+							continue;
+						}
+					}
 				}
 			} // while (inputs_left--)
+
+			if (read_count == 0) { // We have a problem! The incoming buffer has data, but we readed zero.
+				data_packets--; // Do a fake loop! That's roll-back to re-read.
+				continue;
+			}
 
 			// We have data. Mix it with NULLs and stuff it in the output buffer
 			// If the have no data, the output buffer will automaticaly be left
