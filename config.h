@@ -53,6 +53,7 @@ typedef struct {
 	int				quiet;
 
 	int				write_input_file;
+	int				write_output_network;
 	int				write_output_file;
 	int				pcr_mode;			// 0 - do not touch PCRs
 										// 1 - move PCRs to their calculated place

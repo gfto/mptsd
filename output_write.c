@@ -217,7 +217,9 @@ void * output_handle_write(void *_config) {
 		if (written < 0) {
 			LOG("OUTPUT: Error writing into output socket.\n");
 			shutdown_fd(&o->out_sock);
-			connect_output(o);
+			if (conf->write_output_network) {
+				connect_output(o);
+			}
 		}
 	}
 OUT:

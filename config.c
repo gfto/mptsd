@@ -413,6 +413,7 @@ static void show_usage(void) {
 	puts("Server settings:");
 	puts("\t-b addr\t\tLocal IP address to bind.   (default: 0.0.0.0)");
 	puts("\t-p port\t\tPort to listen.             (default: 0)");
+	puts("\t-N disable network");
 	puts("\t-d pidfile\tDaemonize with pidfile");
 	puts("\t-l host\t\tSyslog host                 (default: disabled)");
 	puts("\t-L port\t\tSyslog port                 (default: 514)");
@@ -454,8 +455,9 @@ void config_load(CONFIG *conf, int argc, char **argv) {
 	conf->logport = 514;
 	conf->server_port = 0;
 	conf->server_socket = -1;
+	conf->write_output_network = 1;
 
-	while ((j = getopt(argc, argv, "i:b:p:g:c:n:e:d:t:o:O:P:l:L:B:m:qDHhWE")) != -1) {
+	while ((j = getopt(argc, argv, "i:b:p:g:c:n:e:d:t:o:O:P:l:L:B:m:qDHhEWN")) != -1) {
 		switch (j) {
 			case 'i':
 				conf->ident = strdup(optarg);
@@ -530,6 +532,9 @@ void config_load(CONFIG *conf, int argc, char **argv) {
 					exit(1);
 				}
 				break;
+			case 'N':
+				conf->write_output_network = 0;
+				break;
 			case 'W':
 				conf->write_output_file = 1;
 				output_open_file(conf->output);
@@ -550,7 +555,7 @@ void config_load(CONFIG *conf, int argc, char **argv) {
 				break;
 		}
 	}
-	if (!conf->output->out_host.s_addr) {
+	if (conf->write_output_network && !conf->output->out_host.s_addr) {
 		fprintf(stderr, "ERROR: Output address is not set (use -O x.x.x.x)\n");
 		show_usage();
 		goto ERR;
