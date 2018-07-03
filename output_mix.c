@@ -134,6 +134,7 @@ void * output_handle_mix(void *_config) {
 
 			// Loop over inputs
 			int inputs_left = conf->inputs->items;
+			int read_count = 0;
 			while (inputs_left--) {
 				inpt = inpt->next;
 				INPUT *r = inpt->data;
@@ -148,11 +149,24 @@ void * output_handle_mix(void *_config) {
 						uint16_t pid = ts_packet_get_pid(data);
 						// Do we have PCR packet?
 						if (pid == r->output_pcr_pid && ts_packet_has_pcr(data)) {
+
+							if (r->output_last_pcr != 0 && r->output_pcr_packets_needed <= 0) {
+								// Calculate the required number of packets betweem this PCR and the last one
+								r->output_pcr_packets_needed = round((double)(conf->output_bitrate / 8 / 27000000 / 188) * (ts_packet_get_pcr(data) - r->output_last_pcr)) - 1;
+								// Check the boundaries
+								if (r->output_pcr_packets_needed > o_maxpackets)
+									r->output_pcr_packets_needed = o_maxpackets;
+								else if (r->output_pcr_packets_needed < 0)
+									r->output_pcr_packets_needed = 0;
+							}
+
 							if (r->output_pcr_packets_needed > 0 && r->outputed_packets < r->output_pcr_packets_needed) {
 								data = NULL;
 								data_size = 0;
+								read_count++;
 								continue;
 							}
+							r->output_pcr = ts_packet_get_pcr(data);
 /*
 							LOGf("%10s | pcr:%15llu last_pcr:%15llu diff:%10lld packets:%5d needed_packs:%d diff:%d\n",
 								r->channel->id,
@@ -164,24 +178,42 @@ void * output_handle_mix(void *_config) {
 								r->outputed_packets - r->output_pcr_packets_needed
 							);
 */
-							uint64_t last_last_pcr = r->output_last_pcr;
 							r->output_last_pcr = r->output_pcr;
-							r->output_pcr = ts_packet_get_pcr(data);
-							if (last_last_pcr)
-								r->output_pcr_packets_needed = round(conf->output_bitrate / 8 * (r->output_pcr - r->output_last_pcr) / 27000000 / 188);
+							r->output_pcr_packets_needed = 0;
 							r->outputed_packets = 0;
 						}
 						data = cbuf_get(r->buf, TS_PACKET_SIZE, &data_size);
-						if (data_size == TS_PACKET_SIZE) // We have our data, no need to look at other inputs
-							break;
+						read_count++;
+						if (data_size == TS_PACKET_SIZE) { // We have our data, no need to look at other inputs
+							if (ts_packet_get_pid(data) < 0x1fff)
+								break;
+							else { // Remove padding
+								data = NULL;
+								data_size = 0;
+								continue;
+							}
+						}
 					}
 				// Do not move PCRs
 				} else {
 					data = cbuf_get(r->buf, TS_PACKET_SIZE, &data_size);
-					if (data_size == TS_PACKET_SIZE) // We have our data, no need to look at other inputs
-						break;
+					read_count++;
+					if (data_size == TS_PACKET_SIZE) {// We have our data, no need to look at other inputs
+						if (ts_packet_get_pid(data) < 0x1fff)
+							break;
+						else { // Remove padding
+							data = NULL;
+							data_size = 0;
+							continue;
+						}
+					}
 				}
 			} // while (inputs_left--)
+
+			if (read_count == 0) { // We have a problem! We have data in the incoming buffers, but nothing readed!
+				data_packets--; // So, we do a fake loop for retry... (insufficient incoming data?)
+				continue;
+			}
 
 			// We have data. Mix it with NULLs and stuff it in the output buffer
 			// If the have no data, the output buffer will automaticaly be left
