@@ -256,7 +256,7 @@ INPUT * input_new(const char *name, CHANNEL *channel) {
 		FREE(tmp);
 	}
 
-	r->buf = cbuf_init(1428 * 1316, channel->id); // ~ 10000 x 188
+	r->buf = cbuf_init(1428 * 1316 * 4, channel->id); // ~ 40000 x 188
 
 	input_stream_alloc(r);
 
