@@ -66,7 +66,7 @@ static void output_psi_init_nit(CONFIG *conf, OUTPUT *o) {
 		list_for_each(conf->channels, lc, lctmp) {
 			CHANNEL *c = lc->data;
 			uint32_t srv = 0;
-			srv  = (c->service_id &~ 0x00ff) << 16;
+			srv  = (c->service_id &~ 0x00ff) << 8;
 			srv |= (c->service_id &~ 0xff00) << 8;
 			srv |= c->radio ? 0x02 : 0x01;
 			services[num++] = srv;
