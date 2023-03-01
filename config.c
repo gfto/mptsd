@@ -130,6 +130,8 @@ int config_load_channels(CONFIG *conf) {
 			continue;
 		}
 
+		int eit_mode = ini_get_int(ini, 0, "Channel%d:eit_mode", i);
+
 		for (j=1;j<8;j++) {
 			char *source = ini_get_string(ini, NULL, "Channel%d:source%d", i, j);
 			if (j == 1 && !source) {
@@ -142,7 +144,7 @@ int config_load_channels(CONFIG *conf) {
 				}
 				// Init channel
 				if (channel == NULL) {
-					channel = channel_new(service_id, is_radio, id, name, source, i);
+					channel = channel_new(service_id, is_radio, id, name, eit_mode, source, i);
 				} else {
 					chansrc_add(channel, source);
 				}
@@ -222,7 +224,7 @@ int config_load_channels(CONFIG *conf) {
 		if (r->cookie != cookie) {
 			proxy_log(r, "Remove");
 			/* Replace channel reference with real object and instruct free_restreamer to free it */
-			r->channel = channel_new(r->channel->service_id, r->channel->radio, r->channel->id, r->channel->name, r->channel->source, r->channel->index);
+			r->channel = channel_new(r->channel->service_id, r->channel->radio, r->channel->id, r->channel->name, r->channel->eit_mode, r->channel->source, r->channel->index);
 			r->freechannel = 1;
 			r->dienow = 1;
 		}

@@ -121,7 +121,7 @@ void chansrc_set(CHANNEL *c, uint8_t src_id) {
 
 
 
-CHANNEL *channel_new(int service_id, int is_radio, const char *id, const char *name, const char *source, int channel_index){
+CHANNEL *channel_new(int service_id, int is_radio, const char *id, const char *name, int eit_mode, const char *source, int channel_index){
 
     if (channel_index<=0 || channel_index>=256)
     {
@@ -139,6 +139,7 @@ CHANNEL *channel_new(int service_id, int is_radio, const char *id, const char *n
 	c->pmt_pid = c->base_pid; // The first pid is saved for PMT
 	c->id = strdup(id);
 	c->name = strdup(name);
+	c->eit_mode = eit_mode;
 	chansrc_add(c, source);
 
 
@@ -219,6 +220,7 @@ void input_stream_alloc(INPUT *input) {
 	input->stream.pidref = pidref_init(64, input->channel->base_pid);
 	input->stream.pat = ts_pat_alloc();
 	input->stream.pmt = ts_pmt_alloc();
+	input->stream.eit = ts_eit_alloc();
 	input->stream.last_pat = ts_pat_alloc();
 	input->stream.last_pmt = ts_pmt_alloc();
 }
@@ -230,6 +232,8 @@ void input_stream_free(INPUT *input) {
 	ts_pat_free(&input->stream.pat);
 	ts_pat_free(&input->stream.pat_rewritten);
 	ts_pat_free(&input->stream.last_pat);
+	ts_eit_free(&input->stream.eit);
+	ts_eit_free(&input->stream.eit_rewritten);
 	pidref_free(&input->stream.pidref);
 	input->stream.nit_pid    = 0;
 	input->stream.pmt_pid    = 0;
