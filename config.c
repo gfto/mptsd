@@ -429,6 +429,7 @@ static void show_usage(void) {
 	puts("\t-P ip\t\tOutput udp port             (default: 5000)");
 	puts("\t-o ip\t\tOutput interface address    (default: 0.0.0.0)");
 	puts("\t-t ttl\t\tSet multicast ttl           (default: 1)");
+	puts("\t-s SSRC\t\tEnables RTP                 (default: disabled)");
 	puts("");
 	puts("\t-B Mbps\t\tOutput bitrate in Mbps      (default: 38.00)");
 	puts("\t-m mode\t\tPCR mode (modes list bellow)");
@@ -451,13 +452,15 @@ void config_load(CONFIG *conf, int argc, char **argv) {
 
 	conf->multicast_ttl = 1;
 	conf->output->out_port = 5000;
+	conf->output->rtp_sequence_number = 1;
+	conf->output->rtp_ssrc = 0;
 	conf->output_bitrate = 38;
 	conf->logport = 514;
 	conf->server_port = 0;
 	conf->server_socket = -1;
 	conf->write_output_network = 1;
 
-	while ((j = getopt(argc, argv, "i:b:p:g:c:n:e:d:t:o:O:P:l:L:B:m:qDHhEWN")) != -1) {
+	while ((j = getopt(argc, argv, "i:b:p:g:c:n:e:d:t:o:O:P:l:L:B:m:s:qDHhEWN")) != -1) {
 		switch (j) {
 			case 'i':
 				conf->ident = strdup(optarg);
@@ -508,6 +511,9 @@ void config_load(CONFIG *conf, int argc, char **argv) {
 					fprintf(stderr, "Invalid output port: %s\n", optarg);
 					exit(1);
 				}
+				break;
+			case 's':
+				conf->output->rtp_ssrc = strtoul(optarg, NULL, 10);
 				break;
 			case 'm':
 				conf->pcr_mode = atoi(optarg);
@@ -593,10 +599,11 @@ void config_load(CONFIG *conf, int argc, char **argv) {
 		printf("\tGlobal config     : %s\n", conf->global_conf);
 		printf("\tChannels config   : %s\n", conf->channels_conf);
 		printf("\tNIT config        : %s\n", conf->nit_conf);
-		printf("\tOutput addr       : udp://%s:%d\n", inet_ntoa(conf->output->out_host), conf->output->out_port);
+		printf("\tOutput addr       : %s://%s:%d\n", (conf->output->rtp_ssrc != 0 ? "rtp" : "udp"), inet_ntoa(conf->output->out_host), conf->output->out_port);
 		if (conf->output_intf.s_addr)
 			printf("\tOutput iface addr : %s\n", inet_ntoa(conf->output_intf));
 		printf("\tMulticast ttl     : %d\n", conf->multicast_ttl);
+		printf("\tRTP SSRC          : %u\n", conf->output->rtp_ssrc);
 		if (conf->syslog_active) {
 			printf("\tSyslog host       : %s\n", conf->loghost);
 			printf("\tSyslog port       : %d\n", conf->logport);

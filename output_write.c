@@ -100,6 +100,8 @@ void ts_frame_process(CONFIG *conf, OUTPUT *o, uint8_t *data) {
 	}
 }
 
+
+// write plain UDP packets
 ssize_t ts_frame_write(OUTPUT *o, uint8_t *data) {
 	ssize_t written;
 	written = fdwrite(o->out_sock, (char *)data, FRAME_PACKET_SIZE);
@@ -110,6 +112,55 @@ ssize_t ts_frame_write(OUTPUT *o, uint8_t *data) {
 
 	if (o->ofd)
 		write(o->ofd, data, FRAME_PACKET_SIZE);
+
+	return written;
+}
+
+
+// write RTP packets
+ssize_t ts_frame_write_rtp(OUTPUT *o, uint8_t *data) {
+	ssize_t written;
+	const size_t write_len = FRAME_PACKET_SIZE + RTP_HEADER_SIZE;
+	uint8_t rtp_buffer[write_len];
+
+	rtp_buffer[0] = (((2 & 0x03) << 6)			// version
+					 | ((0 & 0x01) << 5)		// padding
+					 | ((0 & 0x01) << 4)		// extension
+					 | ((0 & 0x0F) << 0));		// cc
+
+	rtp_buffer[1] = ( ((0  & 0x01) << 7)		// Marker
+	 				| ((33 & 0x7F) << 0) );		// Payload type: MPEG-II transport streams (33)
+	
+	// sequence number
+	uint16_t seq = htons(o->rtp_sequence_number);
+	memcpy (&rtp_buffer[2], &seq, 2);
+
+	// timestamp
+	struct timespec ts;
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+	uint64_t time = ts.tv_sec * 1000000ll + ts.tv_nsec / 1000;
+	uint32_t timestamp_value = (uint32_t) (90000 * (time/1000000ll))+(9*(time%1000000ll))/100; // 90 kHz Clock
+	uint32_t timestamp = htonl(timestamp_value);
+	memcpy (&rtp_buffer[4], &timestamp, 4);
+
+	// SSRC
+	uint32_t ssrc = htonl(o->rtp_ssrc);
+	memcpy (&rtp_buffer[8], &ssrc, 4);
+
+	// copy payload
+	memcpy(&rtp_buffer[12], data, FRAME_PACKET_SIZE);
+
+	written = fdwrite(o->out_sock, (char *)rtp_buffer, write_len);
+	if (written >= RTP_HEADER_SIZE) {
+		written -= RTP_HEADER_SIZE;
+		o->traffic        += written;
+		o->traffic_period += written;
+	}
+
+	if (o->ofd)
+		write(o->ofd, data, FRAME_PACKET_SIZE);
+
+	o->rtp_sequence_number++; // increment RTP sequence number
 
 	return written;
 }
@@ -169,7 +220,11 @@ void * output_handle_write(void *_config) {
 			long sleep_interval = conf->output_tmout;
 			uint8_t *ts_frame = curbuf->buf + curbuf->written;
 			ts_frame_process(conf, o, ts_frame);	// Fix PCR and count NULL packets
-			written += ts_frame_write(o, ts_frame);	// Write packet to network/file
+			if (o->rtp_ssrc != 0) {
+				written += ts_frame_write_rtp(o, ts_frame); // Write RTP packet to network/file
+			} else {
+				written += ts_frame_write(o, ts_frame);	// Write plain UDP packet to network/file
+			}
 			curbuf->written += FRAME_PACKET_SIZE;
 			if (packets_written) {
 				time_taken = timeval_diff_usec(&start_write_ts, &used_ts);
