@@ -89,6 +89,7 @@ void config_free(CONFIG **pconf) {
 		FREE(conf->epg_conf);
 		FREE(conf->network_name);
 		FREE(conf->provider_name);
+		FREE(conf->output_filename);
 		FREE(*pconf);
 	}
 }
@@ -444,7 +445,8 @@ static void show_usage(void) {
 	puts("\t-q\t\tQuiet");
 	puts("\t-D\t\tDebug");
 	puts("");
-	puts("\t-W\t\tWrite output file");
+	puts("\t-W\t\tWrite output file           (recommended to use with -N)");
+	puts("\t-f\t\tThe output filename         (default: mptsd-output.ts)");
 	puts("\t-E\t\tWrite input file");
 	puts("");
 }
@@ -462,7 +464,7 @@ void config_load(CONFIG *conf, int argc, char **argv) {
 	conf->server_socket = -1;
 	conf->write_output_network = 1;
 
-	while ((j = getopt(argc, argv, "i:b:p:g:c:n:e:d:t:o:O:P:l:L:B:m:s:qDHhEWN")) != -1) {
+	while ((j = getopt(argc, argv, "i:b:p:g:c:n:e:d:t:o:O:P:l:L:B:m:s:f:qDHhEWN")) != -1) {
 		switch (j) {
 			case 'i':
 				conf->ident = strdup(optarg);
@@ -545,10 +547,12 @@ void config_load(CONFIG *conf, int argc, char **argv) {
 				break;
 			case 'W':
 				conf->write_output_file = 1;
-				output_open_file(conf->output);
 				break;
 			case 'E':
 				conf->write_input_file = 1;
+				break;
+			case 'f':
+				conf->output_filename = strdup(optarg);
 				break;
 			case 'D':
 				conf->debug = 1;
@@ -564,7 +568,7 @@ void config_load(CONFIG *conf, int argc, char **argv) {
 		}
 	}
 	if (conf->write_output_network && !conf->output->out_host.s_addr) {
-		fprintf(stderr, "ERROR: Output address is not set (use -O x.x.x.x)\n");
+		fprintf(stderr, "ERROR: Output address is not set (use -O x.x.x.x)\n\n");
 		show_usage();
 		goto ERR;
 	}
@@ -585,12 +589,20 @@ void config_load(CONFIG *conf, int argc, char **argv) {
 	if (!conf->epg_conf) {
 		conf->epg_conf = strdup("mptsd_epg.conf");
 	}
+	if (!conf->output_filename) {
+		conf->output_filename = strdup("mptsd-output.ts");
+	}
 
 	// Align bitrate to 1 packet (1316 bytes)
 	conf->output_bitrate        *= 1000000; // In bytes
 	conf->output_packets_per_sec = ceil(conf->output_bitrate / (1316 * 8));
 	conf->output_bitrate         = conf->output_packets_per_sec * (1316 * 8);
 	conf->output_tmout           = 1000000 / conf->output_packets_per_sec;
+
+	// Open the filename if we want to write to a file
+	if(conf->write_output_file) {
+		output_open_file(conf->output_filename, conf->output);
+	}
 
 	if (conf->server_port)
 		init_server_socket(conf->server_addr, conf->server_port, &conf->server, &conf->server_socket);
@@ -601,7 +613,10 @@ void config_load(CONFIG *conf, int argc, char **argv) {
 		printf("\tGlobal config     : %s\n", conf->global_conf);
 		printf("\tChannels config   : %s\n", conf->channels_conf);
 		printf("\tNIT config        : %s\n", conf->nit_conf);
-		printf("\tOutput addr       : %s://%s:%d\n", (conf->output->rtp_ssrc != 0 ? "rtp" : "udp"), inet_ntoa(conf->output->out_host), conf->output->out_port);
+		if (conf->write_output_network)
+			printf("\tOutput addr       : %s://%s:%d\n", (conf->output->rtp_ssrc != 0 ? "rtp" : "udp"), inet_ntoa(conf->output->out_host), conf->output->out_port);
+		else
+			printf("\tOutput addr       : disabled\n");
 		if (conf->output_intf.s_addr)
 			printf("\tOutput iface addr : %s\n", inet_ntoa(conf->output_intf));
 		printf("\tMulticast ttl     : %d\n", conf->multicast_ttl);
@@ -610,7 +625,7 @@ void config_load(CONFIG *conf, int argc, char **argv) {
 			printf("\tSyslog host       : %s\n", conf->loghost);
 			printf("\tSyslog port       : %d\n", conf->logport);
 		} else {
-			printf("\tSyslog disabled.\n");
+			printf("\tSyslog            : disabled\n");
 		}
 		printf("\tOutput bitrate    : %.0f bps, %.2f Kbps, %.2f Mbps\n", conf->output_bitrate, conf->output_bitrate / 1000, conf->output_bitrate / 1000000);
 		printf("\tOutput pkt tmout  : %ld us\n", conf->output_tmout);
@@ -622,7 +637,7 @@ void config_load(CONFIG *conf, int argc, char **argv) {
 			conf->pcr_mode == 3 ? "Move PCRs and rewrite them" : "???"
 		);
 		if (conf->write_output_file)
-			printf("\tWrite output file\n");
+			printf("\tWrite output file : %s\n", conf->output_filename);
 		if (conf->write_input_file)
 			printf("\tWrite input file(s)\n");
 	}

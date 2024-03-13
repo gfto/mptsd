@@ -103,15 +103,19 @@ void ts_frame_process(CONFIG *conf, OUTPUT *o, uint8_t *data) {
 
 // write plain UDP packets
 ssize_t ts_frame_write(OUTPUT *o, uint8_t *data) {
-	ssize_t written;
+	ssize_t written, written2;
+
 	written = fdwrite(o->out_sock, (char *)data, FRAME_PACKET_SIZE);
+	if (o->ofd)
+		written2 = write(o->ofd, data, FRAME_PACKET_SIZE);
+	else written2 = 0;
+
+	if (written2 > written)
+		written = written2;
 	if (written >= 0) {
 		o->traffic        += written;
 		o->traffic_period += written;
 	}
-
-	if (o->ofd)
-		write(o->ofd, data, FRAME_PACKET_SIZE);
 
 	return written;
 }
