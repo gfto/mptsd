@@ -33,11 +33,12 @@ you can change to suit your needs.
 
 One mptsd instance should be used for each transponder.
 
-Limitations
-===========
-mptsd do not apply PCR restamping to output. If hardware modulator requires
-correct PCR (most cheap modulators do) it probably won't like what mptsd
-outputs. mptsd was tested and found to be working ok with Dektec DTE-3114.
+Output Stream
+=============
+mptsd can achieve perfect PCR restamping to output using "-m 3".
+This is useful for hardware modulators that require correct PCR values
+(most cheap modulators do, so always use "-m 3" with them).
+mptsd was tested and found to be working ok with Dektec DTE-3114 & HiDes UT-100C.
 
 Development
 ===========
