@@ -54,7 +54,9 @@ typedef struct {
 
 	int				write_input_file;
 	int				write_output_network;
-	int				write_output_file;
+	int				write_output_file;  // 0 - do not write an output file
+										// 1 - write output files
+	char			*output_filename;	// filename to write the output
 	int				pcr_mode;			// 0 - do not touch PCRs
 										// 1 - move PCRs to their calculated place
 										// 2 - rewrite PCRs using output bitrate
