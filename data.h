@@ -210,6 +210,9 @@ typedef struct {
 	uint64_t last_org_pcr[8193];	// Last PCR value indexed by PID x
 	uint64_t last_pcr[8193];		// Last PCR value indexed by PID x
 	uint64_t last_traffic[8193];	// Last traffic when PCR with PID x was seen
+
+	uint16_t rtp_sequence_number;	// RTP sequence number
+	uint32_t rtp_ssrc;				// use RTP is != 0
 } OUTPUT;
 
 typedef struct {

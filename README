@@ -40,6 +40,9 @@ This is useful for hardware modulators that require correct PCR values
 (most cheap modulators do, so always use "-m 3" with them).
 mptsd was tested and found to be working ok with Dektec DTE-3114 & HiDes UT-100C.
 
+To enable RTP output instead of plain UDP for network streams,
+specify the SSRC identifier via the -s flag (must be != 0).
+
 Development
 ===========
 The development is tracked using git. The repository is hosted at github
