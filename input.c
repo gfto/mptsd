@@ -21,6 +21,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <string.h>
+#include <inttypes.h>
 
 #include "libfuncs/io.h"
 #include "libfuncs/log.h"
@@ -376,8 +377,8 @@ int in_worktime(int start, int end) {
 void * input_stream(void *self) {
 	INPUT *r = self;
 	INPUT_STREAM *s = &r->stream;
+	struct timeval stats_ts, now;
 	char buffer[RTP_HEADER_SIZE + FRAME_PACKET_SIZE];
-	char *buf = buffer + RTP_HEADER_SIZE;
 
 	signal(SIGPIPE, SIG_IGN);
 
@@ -387,6 +388,7 @@ void * input_stream(void *self) {
 		proxy_log(r, "Worktime has not yet begin, sleeping.");
 
 	int http_code = 0;
+	gettimeofday(&stats_ts, NULL);
 	while (keep_going) {
 		if (input_check_state(r) == 2) // r->dienow is on
 			goto QUIT;
@@ -416,12 +418,15 @@ void * input_stream(void *self) {
 		}
 
 		ssize_t readen;
+		ssize_t rtp_length;
+ 		int i = 0;
 		int max_zero_reads = MAX_ZERO_READS;
 
 		// Reset all stream parameters on reconnect.
 		input_stream_reset(r);
 
 		for (;;) {
+			gettimeofday(&now, NULL);
 			r->working = in_worktime(r->channel->worktime_start, r->channel->worktime_end);
 			if (!r->working) {
 				proxy_log(r, "Worktime ended.");
@@ -434,14 +439,16 @@ void * input_stream(void *self) {
 			}
 
 			if (sproto == tcp_sock) {
-				readen = fdread_ex(r->sock, buf, FRAME_PACKET_SIZE, TCP_READ_TIMEOUT, TCP_READ_RETRIES, 1);
+				readen = fdread_ex(r->sock, buffer, FRAME_PACKET_SIZE, TCP_READ_TIMEOUT, TCP_READ_RETRIES, 1);
 			} else {
-				if (!rtp) {
-					readen = fdread_ex(r->sock, buf, FRAME_PACKET_SIZE, UDP_READ_TIMEOUT, UDP_READ_RETRIES, 0);
-				} else {
+				if (!rtp) { // plain UDP
+					readen = fdread_ex(r->sock, buffer, FRAME_PACKET_SIZE, UDP_READ_TIMEOUT, UDP_READ_RETRIES, 0);
+				} else { // RTP
 					readen = fdread_ex(r->sock, buffer, FRAME_PACKET_SIZE + RTP_HEADER_SIZE, UDP_READ_TIMEOUT, UDP_READ_RETRIES, 0);
-					if (readen > RTP_HEADER_SIZE)
-						readen -= RTP_HEADER_SIZE;
+					if (readen > RTP_HEADER_SIZE) {
+						rtp_length = handle_rtp_input((uint8_t *)buffer, readen, r);
+						i = rtp_length; // skip RTP header during TS reading
+					}
 				}
 			}
 
@@ -456,13 +463,19 @@ void * input_stream(void *self) {
 				continue;
 			}
 
-			int i;
-			for (i=0; i<readen; i+=188) {
+			r->traffic        += readen - i;
+			r->traffic_period += readen - i;
+
+			for (; i<readen; i+=188) {
 
 				if (r->dienow)
 					goto QUIT;
-				uint8_t *ts_packet = (uint8_t *)buf + i;
+				uint8_t *ts_packet = (uint8_t *)buffer + i;
 				uint16_t pid = ts_packet_get_pid(ts_packet);
+
+				if(pid == 0x1FFF) { // NULL packets (Stuffing)
+					r->padding_period += 188;
+				}
 
 				int pat_result = process_pat(r, pid, ts_packet);
 				if (pat_result == -2)
@@ -503,6 +516,19 @@ void * input_stream(void *self) {
 					if (!r->input_ready)
 						r->input_ready = 1;
 				}
+			}
+
+			// stats
+			unsigned long long stats_interval = timeval_diff_msec(&stats_ts, &now);
+			if (stats_interval > config->timeouts.stats) {
+				stats_ts = now;
+				double kbps = (double)(r->traffic_period * 8) / 1000;
+				double padding = ((double)r->padding_period / r->traffic_period) * 100;
+
+				update_traffic_stats(&r->traffic_stats, kbps, padding, r->traffic_period);
+
+				r->traffic_period = 0;
+				r->padding_period = 0;
 			}
 
 			max_zero_reads = MAX_ZERO_READS;

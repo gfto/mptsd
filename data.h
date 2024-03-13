@@ -35,6 +35,37 @@
 
 #include "pidref.h"
 
+typedef struct {
+	uint8_t version : 2;
+	uint8_t padding : 1;
+	uint8_t extension : 1;
+	uint8_t cc : 4;
+	uint8_t marker : 1;
+	uint8_t payload_type : 7;
+	uint16_t sequence_number;
+	uint32_t timestamp;
+	uint32_t ssrc;
+} RTP_HEADER;
+
+typedef struct {
+	int32_t last_sequence_number;
+	uint32_t ssrc;
+	uint64_t packets_received;
+	uint64_t packets_lost;
+} RTP_STATS;
+
+typedef struct {
+	double kpbs;
+	double padding;
+	uint64_t traffic;
+} TRAFFIC_STATS_ENTRY;
+
+typedef struct {
+	TRAFFIC_STATS_ENTRY min;
+	TRAFFIC_STATS_ENTRY max;
+	TRAFFIC_STATS_ENTRY last;
+} TRAFFIC_STATS;
+
 typedef enum { udp_sock, tcp_sock } channel_source;
 
 typedef struct {
@@ -134,6 +165,12 @@ typedef struct {
 	int cookie;				/* Used in chanconf to determine if the restreamer is alrady checked */
 	int ifd;
 
+	uint64_t traffic;
+	uint64_t traffic_period;
+	uint64_t padding_period;
+	TRAFFIC_STATS traffic_stats;
+	RTP_STATS rtp_stats;
+
 	pthread_t thread;
 
 	uint16_t output_pcr_pid;
@@ -185,6 +222,8 @@ typedef struct {
 
 	uint64_t traffic_period;
 	uint64_t padding_period;
+
+	TRAFFIC_STATS traffic_stats;
 
 	uint8_t pid_pat_cont:4;
 	uint8_t pid_nit_cont:4;
@@ -261,4 +300,8 @@ void		nit_free		(NIT **nit);
 void		proxy_log		(INPUT *r, char *msg);
 void		proxy_close		(LIST *inputs, INPUT **input);
 
+ssize_t		handle_rtp_input (uint8_t *buf, size_t len, INPUT *input);
+ssize_t		parse_rtp		(const uint8_t *buf, size_t len, RTP_HEADER *rtp_header);
+
+void 		update_traffic_stats	(TRAFFIC_STATS *stats, double kbps, double padding, uint64_t traffic);
 #endif

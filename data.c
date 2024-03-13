@@ -25,6 +25,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <stdarg.h>
+#include <stdint.h>
+#include <float.h>
 
 #include "libfuncs/io.h"
 #include "libfuncs/log.h"
@@ -256,6 +259,11 @@ INPUT * input_new(const char *name, CHANNEL *channel) {
 	r->sock = -1;
 	r->channel = channel;
 
+	r->rtp_stats.last_sequence_number = -1;
+	r->traffic_stats.min.traffic = UINT64_MAX;
+	r->traffic_stats.min.kpbs = DBL_MAX;
+	r->traffic_stats.min.padding = DBL_MAX;
+
 	if (config->write_input_file) {
 		if (asprintf(&tmp, "mptsd-input-%s.ts", channel->id) > 0)
 			r->ifd = open(tmp, O_CREAT | O_WRONLY | O_TRUNC, 0644);
@@ -293,6 +301,10 @@ void input_free(INPUT **pinput) {
 OUTPUT *output_new() {
 	OUTPUT *o = calloc(1, sizeof(OUTPUT));
 	o->obuf_ms = 100;
+
+	o->traffic_stats.min.traffic = UINT64_MAX;
+	o->traffic_stats.min.kpbs = DBL_MAX;
+	o->traffic_stats.min.padding = DBL_MAX;
 
 	o->psibuf = cbuf_init(50 * 1316, "psi");
 	if (!o->psibuf) {
@@ -434,9 +446,109 @@ void proxy_log(INPUT *r, char *msg) {
 		LOGf("INPUT : [%-12s] %s fd: %d src: %s\n", r->channel->id, msg, r->sock, r->channel->source);
 }
 
+void proxy_logf(INPUT *r, const char *fmt, ...) {
+	char msg[1024];
+	va_list args;
+	va_start(args, fmt);
+	vsnprintf(msg, sizeof(msg) - 1, fmt, args);
+	va_end(args);
+	msg[sizeof(msg) - 1] = '\0';
+
+	proxy_log(r, msg);
+}
+
 void proxy_close(LIST *inputs, INPUT **input) {
 	proxy_log(*input, "Stop");
 	// If there are no clients left, no "Timeout" messages will be logged
 	list_del_entry(inputs, *input);
 	input_free(input);
+}
+
+ssize_t parse_rtp(const uint8_t *buf, size_t len, RTP_HEADER *rtp_header) {
+	size_t rtp_length = RTP_HEADER_SIZE;
+
+	if (len < RTP_HEADER_SIZE)
+		return -1;
+
+	rtp_header->version = buf[0] >> 6;
+	rtp_header->padding = !!((buf[0]) & (1 << 5));
+	rtp_header->extension = !!((buf[0]) & (1 << 4));
+	rtp_header->cc = buf[0] & 0xFF;
+
+	rtp_header->marker = !!((buf[1]) & (1 << 8));
+	rtp_header->payload_type = buf[1] & 0x7f;
+
+	// Sequence number
+	rtp_header->sequence_number = (buf[2] << 8) | (buf[3]);
+
+	// Timestamp
+	rtp_header->timestamp =
+		(buf[4] << 24) | (buf[5] << 16) | (buf[6] << 8) | (buf[7]);
+
+	// SSRC identifier
+	rtp_header->ssrc =
+		(buf[8] << 24) | (buf[9] << 16) | (buf[10] << 8) | (buf[11]);
+
+	rtp_length += rtp_header->cc * 4;
+
+	return rtp_length;
+}
+
+ssize_t handle_rtp_input(uint8_t *buf, size_t len, INPUT *input) {
+	RTP_HEADER rtp_header;
+	ssize_t rtp_length = parse_rtp(buf, len, &rtp_header);
+
+	RTP_STATS *stats = &input->rtp_stats;
+
+	stats->packets_received++;
+	if (stats->last_sequence_number >= 0) {
+		uint16_t expected_sequence_number = stats->last_sequence_number + 1;
+		if (rtp_header.sequence_number != expected_sequence_number) {
+			int32_t lost_packets =
+				rtp_header.sequence_number - expected_sequence_number;
+			// counter wrapped
+			if (lost_packets < 0) {
+				lost_packets += 0xFFFF;
+			}
+			proxy_logf(
+				input,
+				"RTP packets lost at sequence number %u: %i (total: %lu)",
+				rtp_header.sequence_number, lost_packets, stats->packets_lost);
+
+			// if the sequence number is 1, assume that the
+			// source was restarted (don't update packet_lost
+			// counter)
+			if (rtp_header.sequence_number != 1) {
+				stats->packets_lost += lost_packets;
+			}
+		}
+	}
+	stats->last_sequence_number = rtp_header.sequence_number;
+	stats->ssrc = rtp_header.ssrc;
+
+	return rtp_length;
+}
+
+void update_traffic_stats(TRAFFIC_STATS *stats, double kbps, double padding,
+						  uint64_t traffic) {
+	// last
+	stats->last.kpbs = kbps;
+	stats->last.padding = padding;
+	stats->last.traffic = traffic;
+
+	// min
+	if (kbps < stats->min.kpbs)
+		stats->min.kpbs = kbps;
+	if (padding < stats->min.padding)
+		stats->min.padding = padding;
+	if (traffic < stats->min.traffic)
+		stats->min.traffic = traffic;
+
+	// max
+	if (kbps > stats->max.kpbs)
+		stats->max.kpbs = kbps;
+	if (padding > stats->max.padding)
+		stats->max.padding = padding;
+	if (traffic > stats->max.traffic)
+		stats->max.traffic = traffic;
 }
