@@ -32,6 +32,7 @@
 #include "network.h"
 
 extern int keep_going;
+extern CONFIG *config;
 
 // #define dump_tables 1
 
@@ -137,8 +138,19 @@ void input_rewrite_pmt(INPUT *r) {
 	s->pmt_rewritten = new_pmt;
 }
 
+void input_rewrite_eit(INPUT *r)
+{
+	INPUT_STREAM *s = &r->stream;
+	struct ts_eit *new_eit = ts_eit_copy(s->eit);
+	if (!new_eit)
+		return;
 
-extern CONFIG *config;
+	// Rewrite EIT data
+	new_eit->transport_stream_id = config->transport_stream_id;
+
+	ts_eit_regenerate_packets(new_eit);
+	s->eit_rewritten = new_eit;
+}
 
 void input_buffer_add(INPUT *r, uint8_t *data, int datasize) {
 	if (r->dienow)
@@ -284,6 +296,61 @@ int process_pmt(INPUT *r, uint16_t pid, uint8_t *ts_packet) {
 	return 1;
 }
 
+int process_eit(INPUT *r, uint8_t *ts_packet) {
+	INPUT_STREAM *s = &r->stream;
+
+	if (r->channel->eit_mode == 0) {
+		return -1;
+	}
+
+	s->eit = ts_eit_push_packet(s->eit, ts_packet);
+
+	if (s->eit->initialized)
+	{
+		uint16_t service_id = s->eit->section_header->ts_id_number;
+		uint16_t table_id = s->eit->section_header->table_id;
+		//ts_LOGf("EIT for service_id service_id %d with table_id %d\n", service_id, table_id);
+		if (service_id != r->channel->service_id)
+		{
+			//ts_LOGf("skipping EIT for ts_id_number %d/%d\n", service_id, table_id);
+			return -2;
+		}
+		if (!s->eit_rewritten || (s->eit_rewritten && !s->eit_rewritten->initialized))
+		{
+			input_rewrite_eit(r);
+#if dump_tables
+			proxy_log(r, "EIT found!");
+			proxy_log(r, "*** Original EIT ***");
+			ts_eit_dump(s->eit);
+			proxy_log(r, "*** Rewritten EIT ***");
+			ts_eit_dump(s->eit_rewritten);
+#endif
+		}
+		if (s->eit_rewritten && s->eit_rewritten->initialized)
+		{
+			//ts_LOGf("sending EIT for service_id service_id %d with table_id %d\n", service_id, table_id);
+			int j;
+			struct ts_eit *P = s->eit_rewritten;
+			for (j = 0; j < P->section_header->num_packets; j++)
+			{
+				ts_packet_set_cont(P->section_header->packet_data + (j * TS_PACKET_SIZE), j + s->pid_eit_cont);
+			}
+			P->ts_header.continuity = s->pid_eit_cont;
+			s->pid_eit_cont += P->section_header->num_packets;
+			input_buffer_add(r, P->section_header->packet_data, P->section_header->num_packets * TS_PACKET_SIZE);
+
+			// reset structs for next EIT packets
+			ts_eit_free(&s->eit);
+			s->eit = ts_eit_alloc();
+			ts_eit_free(&s->eit_rewritten);
+			s->eit_rewritten = NULL;
+			return 1;
+		}
+		return -3;
+	}
+	return 0;
+}
+
 int in_worktime(int start, int end) {
 	if (!start && !end)
 		return 1;
@@ -409,8 +476,15 @@ void * input_stream(void *self) {
 					continue;
 
 				pid = ts_packet_get_pid(ts_packet);
-				// Kill incomming NIT, SDT, EIT, RST, TDT/TOT
-				if (pid == s->nit_pid || pid == 0x10 || pid == 0x11 || pid == 0x12 || pid == 0x13 || pid == 0x14 || pid >= 0x1fff) {
+
+				if (pid == 0x12) // EIT
+				{
+					process_eit(r, ts_packet);
+					continue;
+				}
+
+				// Kill incoming NIT, SDT, RST, TDT/TOT
+				if (pid == s->nit_pid || pid == 0x10 || pid == 0x11 || pid == 0x13 || pid == 0x14 || pid >= 0x1fff) {
 					// LOGf("INPUT: %-10s: Remove PID %03x\n", r->channel->id, pid);
 					continue;
 				}

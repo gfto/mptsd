@@ -66,6 +66,9 @@ typedef struct {
 	int			radio;
 	char *		id;
 	char *		name;
+	int			eit_mode; /* 0 = ignore EIT data from input
+							 1 = forward EIT data for the configured service, ignore any other EIT data
+							 */
 	/* Sources */
 	char *		source; /* Full source url */
 	char *		sources[MAX_CHANNEL_SOURCES];
@@ -100,13 +103,16 @@ typedef struct {
 
 	struct ts_pat *pat;		/* The PAT */
 	struct ts_pmt *pmt;		/* The PMT */
+	struct ts_eit *eit;		/* The EIT */
 
 	uint64_t input_pcr;		// Latest PCR entered into input buffer
 
 	uint8_t pid_pat_cont:4;
 	uint8_t pid_pmt_cont:4;
+	uint8_t pid_eit_cont : 4;
 	struct ts_pat *pat_rewritten;	/* The rewritten PAT */
 	struct ts_pmt *pmt_rewritten;	/* The rewritten PMT */
+	struct ts_eit *eit_rewritten;	/* The rewritten EIT */
 
 	struct ts_pat *last_pat;		/* The last incoming PAT */
 	struct ts_pmt *last_pmt;		/* The last incoming PMT */
@@ -220,7 +226,7 @@ EPG_ENTRY *	epg_new			(time_t start, int duration, char *encoding, char *event, 
 void		epg_free		(EPG_ENTRY **e);
 int			epg_changed		(EPG_ENTRY *a, EPG_ENTRY *b);
 
-CHANNEL *	channel_new		(int service_id, int is_radio, const char *id, const char *name, const char *source, int channel_index);
+CHANNEL *	channel_new		(int service_id, int is_radio, const char *id, const char *name, int eit_mode, const char *source, int channel_index);
 void		channel_free	(CHANNEL **c);
 void		channel_free_epg(CHANNEL *c);
 
