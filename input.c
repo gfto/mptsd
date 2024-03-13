@@ -156,7 +156,7 @@ void input_buffer_add(INPUT *r, uint8_t *data, int datasize) {
 	if (r->dienow)
 		return;
 	if (r->ifd)
-		write(r->ifd, data, datasize);
+		if(write(r->ifd, data, datasize) < 0) {;}
 	if (r->disabled) {
 		unsigned long bufsize = r->buf->input - r->buf->output;
 		double buffull = ((double)bufsize / r->buf->size) * 100;
@@ -235,7 +235,7 @@ int process_pat(INPUT *r, uint16_t pid, uint8_t *ts_packet) {
 			}
 			P->ts_header.continuity = s->pid_pat_cont;
 			s->pid_pat_cont += P->section_header->num_packets;
-			write(r->ifd, P->section_header->packet_data, P->section_header->num_packets * TS_PACKET_SIZE);
+			if (write(r->ifd, P->section_header->packet_data, P->section_header->num_packets * TS_PACKET_SIZE) <0) {;}
 		}
 	}
 	// Stuff packet with NULL data
@@ -347,6 +347,7 @@ int process_eit(INPUT *r, uint8_t *ts_packet) {
 			return 1;
 		}
 		return -3;
+		table_id++; // disable warning unused, this code is not reached
 	}
 	return 0;
 }
