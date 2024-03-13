@@ -138,6 +138,10 @@ void * output_handle_mix(void *_config) {
 			while (inputs_left--) {
 				inpt = inpt->next;
 				INPUT *r = inpt->data;
+				if (!r) { // Skip the empty root!
+					inpt = inpt->next;
+					r = inpt->data;
+				}
 				if (!r || !r->buf)
 					continue;
 
