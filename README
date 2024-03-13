@@ -7,8 +7,9 @@ is used in production in couple of small DVB-C networks.
 
 Installation
 ============
-mptsd do not depend on any external libraries. There are two source code
+mptsd has no hard dependencies on any external libraries. There are two source code
 dependancies that come with mptsd - libfuncs and libtsfuncs.
+The JSON-C library is used for some optional functionality but can be disabled.
 
 Make sure your kernel has CONFIG_HIGH_RES_TIMERS enabled. Otherwise sleep
 timeout probably won't be able to calibrate itself and mptsd will not work.
@@ -43,6 +44,14 @@ mptsd was tested and found to be working ok with Dektec DTE-3114 & HiDes UT-100C
 To enable RTP output instead of plain UDP for network streams,
 specify the SSRC identifier via the -s flag (must be != 0).
 
+Integrated Webserver
+=========
+When mptsd is started with the -p option, it will start a webserver at the
+specified port.
+
+If JSON support is enabled, sending a GET request to /status.json will return a
+JSON file containing various details about the configuration and statistics.
+
 Development
 ===========
 The development is tracked using git. The repository is hosted at github
@@ -54,10 +63,17 @@ to get it, run the following command:
      OR
    git submodule update --recursive --remote  // if you like to checkout HEAD submodules.
 
+
 Compiling
 =========
+mptsd can use the JSON-C library.
+On debian based systems it can be installed using
+`sudo apt install libjson-c-dev`
+
 After cloning the git repository as described in Development section
 just run `make`.
+
+If you don't want JSON support run `make WITH_JSON=0`
 
 Releases
 ========

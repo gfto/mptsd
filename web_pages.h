@@ -20,5 +20,6 @@
 
 void cmd_index(int clientsock);
 void cmd_reconnect(int clientsock);
+void cmd_status_json(int clientsock);
 
 #endif

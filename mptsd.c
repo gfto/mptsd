@@ -34,10 +34,13 @@
 
 #define PROGRAM_NAME "ux-mptsd"
 
+#define STR_HELPER(x) #x
+#define STR(x) STR_HELPER(x)
+
 #ifdef BUILD_ID
-const char *program_id = PROGRAM_NAME " " GIT_VER " build " BUILD_ID;
+const char *program_id = PROGRAM_NAME " " GIT_VER " build " BUILD_ID " WITH_JSON=" STR(WITH_JSON);
 #else
-const char *program_id = PROGRAM_NAME " " GIT_VER;
+const char *program_id = PROGRAM_NAME " " GIT_VER " WITH_JSON=" WITH_JSON;
 #endif
 
 char *server_sig = PROGRAM_NAME;

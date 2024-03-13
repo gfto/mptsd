@@ -13,6 +13,15 @@ else
 CFLAGS += -DGIT_VER=\"$(VERSION)\"
 endif
 
+ifndef WITH_JSON
+$(info enabeling JSON support)
+$(info if you don't want JSON support run)
+$(info make WITH_JSON=0)
+WITH_JSON = 1
+endif
+
+CFLAGS += -DWITH_JSON=$(WITH_JSON)
+
 RM = /bin/rm -f
 Q = @
 
@@ -21,6 +30,10 @@ ifeq ($(uname_S),Darwin)
 LIBS = -lpthread -lm
 else
 LIBS = -lpthread -lm -lrt
+endif
+
+ifeq "$(WITH_JSON)" "1"
+LIBS += -ljson-c
 endif
 
 FUNCS_DIR = libfuncs

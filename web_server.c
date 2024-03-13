@@ -128,6 +128,8 @@ void *process_web_request(void *in_req) {
 
 	if (strlen(path) == 0) {
 		cmd_index(clientsock);
+	} else if (strstr(path,"status.json")==path) {
+		cmd_status_json(clientsock);
 	} else if (strstr(path,"reconnect")==path) {
 		cmd_reconnect(clientsock);
 	} else {
