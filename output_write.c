@@ -55,8 +55,10 @@ void ts_frame_process(CONFIG *conf, OUTPUT *o, uint8_t *data) {
 		ts_packet = data + i;
 		pid = ts_packet_get_pid(ts_packet);
 
-		if (pid == 0x1fff) // NULL packet
+		if (pid == 0x1fff) { // NULL packet
+			ts_packet[3] = 0x10; // set no adaptation field, payload only
 			o->padding_period += TS_PACKET_SIZE;
+		}
 
 		if (ts_packet_has_pcr(ts_packet)) {
 			uint64_t pcr = ts_packet_get_pcr(ts_packet);	// Current PCR
