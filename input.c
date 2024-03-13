@@ -410,7 +410,7 @@ void * input_stream(void *self) {
 
 				pid = ts_packet_get_pid(ts_packet);
 				// Kill incomming NIT, SDT, EIT, RST, TDT/TOT
-				if (pid == s->nit_pid || pid == 0x10 || pid == 0x11 || pid == 0x12 || pid == 0x13 || pid == 0x14 || pid == 0x1fff) {
+				if (pid == s->nit_pid || pid == 0x10 || pid == 0x11 || pid == 0x12 || pid == 0x13 || pid == 0x14 || pid >= 0x1fff) {
 					// LOGf("INPUT: %-10s: Remove PID %03x\n", r->channel->id, pid);
 					continue;
 				}
