@@ -346,10 +346,12 @@ void output_buffer_alloc(OUTPUT *o, double output_bitrate) {
 	o->obuf[1].buf    = malloc(o->obuf[0].size);
 	obuf_reset(&o->obuf[1]);
 
-	LOGf("\tOutput buf size   : %ld * 2 = %ld\n", obuf_size, obuf_size * 2);
-	LOGf("\tOutput buf packets: %ld (188 bytes)\n", obuf_size / 188);
-	LOGf("\tOutput buf frames : %ld (1316 bytes)\n", obuf_size / 1316);
-	LOGf("\tOutput buf ms     : %u ms\n", o->obuf_ms);
+	if (!config->quiet) {
+		LOGf("\tOutput buf size   : %ld * 2 = %ld\n", obuf_size, obuf_size * 2);
+		LOGf("\tOutput buf packets: %ld (188 bytes)\n", obuf_size / 188);
+		LOGf("\tOutput buf frames : %ld (1316 bytes)\n", obuf_size / 1316);
+		LOGf("\tOutput buf ms     : %u ms\n", o->obuf_ms);
+	}
 }
 
 void output_free(OUTPUT **po) {
@@ -421,7 +423,8 @@ void nit_free(NIT **pn) {
 }
 
 void proxy_log(INPUT *r, char *msg) {
-	LOGf("INPUT : [%-12s] %s fd: %d src: %s\n", r->channel->id, msg, r->sock, r->channel->source);
+	if (!config->quiet)
+		LOGf("INPUT : [%-12s] %s fd: %d src: %s\n", r->channel->id, msg, r->sock, r->channel->source);
 }
 
 void proxy_close(LIST *inputs, INPUT **input) {
