@@ -303,7 +303,12 @@ OUTPUT *output_new() {
 }
 
 void output_open_file(char *filename, OUTPUT *o) {
-	int fd = open(filename, O_CREAT | O_WRONLY | O_TRUNC, 0660);
+	int fd = -1;
+	if (strcmp(filename, "-") == 0) {
+		fd = STDOUT_FILENO;
+	} else {
+		fd = open(filename, O_CREAT | O_WRONLY | O_TRUNC, 0660);
+	}
 	if (fd == -1) {
 		perror("Cannot open output file\n");
 		exit(1);

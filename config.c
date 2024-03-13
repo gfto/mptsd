@@ -448,7 +448,7 @@ static void show_usage(void) {
 	puts("\t-D\t\tDebug");
 	puts("");
 	puts("\t-W\t\tWrite output file           (recommended to use with -N)");
-	puts("\t-f\t\tThe output filename         (default: mptsd-output.ts)");
+	puts("\t-f\t\tThe output filename         (default: mptsd-output.ts) (use - for stdout)");
 	puts("\t-E\t\tWrite input file");
 	puts("");
 }
