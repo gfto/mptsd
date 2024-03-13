@@ -61,6 +61,7 @@ typedef struct {
 										// 1 - move PCRs to their calculated place
 										// 2 - rewrite PCRs using output bitrate
 										// 3 - move PCRs and rewrite them
+	int				use_lcn;
 
 	uint16_t		network_id;			// For NIT && SDT
 	uint16_t		transport_stream_id;// For NIT
