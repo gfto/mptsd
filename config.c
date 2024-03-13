@@ -314,12 +314,14 @@ static void config_channel_init_epg(CONFIG *conf, CHANNEL *c, EPG_ENTRY *now, EP
 	int updated = 0;
 
 	if (epg_changed(now, c->epg_now)) {
-		LOGf("EPG  : %s | Now data changed\n", c->id);
+		if(!conf->quiet)
+			LOGf("EPG  : %s | Now data changed\n", c->id);
 		updated++;
 	}
 
 	if (epg_changed(next, c->epg_next)) {
-		LOGf("EPG  : %s | Next data changed\n", c->id);
+		if(!conf->quiet)
+			LOGf("EPG  : %s | Next data changed\n", c->id);
 		updated++;
 	}
 
@@ -608,39 +610,40 @@ void config_load(CONFIG *conf, int argc, char **argv) {
 		init_server_socket(conf->server_addr, conf->server_port, &conf->server, &conf->server_socket);
 
 	if (!conf->quiet) {
-		printf("Configuration:\n");
-		printf("\tServer ident      : %s\n", conf->ident);
-		printf("\tGlobal config     : %s\n", conf->global_conf);
-		printf("\tChannels config   : %s\n", conf->channels_conf);
-		printf("\tNIT config        : %s\n", conf->nit_conf);
+		LOGf("Configuration:\n");
+		LOGf("\tServer ident      : %s\n", conf->ident);
+		LOGf("\tGlobal config     : %s\n", conf->global_conf);
+		LOGf("\tChannels config   : %s\n", conf->channels_conf);
+		LOGf("\tNIT config        : %s\n", conf->nit_conf);
 		if (conf->write_output_network)
-			printf("\tOutput addr       : %s://%s:%d\n", (conf->output->rtp_ssrc != 0 ? "rtp" : "udp"), inet_ntoa(conf->output->out_host), conf->output->out_port);
+			LOGf("\tOutput addr       : %s://%s:%d\n", (conf->output->rtp_ssrc != 0 ? "rtp" : "udp"), inet_ntoa(conf->output->out_host), conf->output->out_port);
 		else
-			printf("\tOutput addr       : disabled\n");
+			LOGf("\tOutput addr       : disabled\n");
 		if (conf->output_intf.s_addr)
-			printf("\tOutput iface addr : %s\n", inet_ntoa(conf->output_intf));
-		printf("\tMulticast ttl     : %d\n", conf->multicast_ttl);
-		printf("\tRTP SSRC          : %u\n", conf->output->rtp_ssrc);
+			LOGf("\tOutput iface addr : %s\n", inet_ntoa(conf->output_intf));
+		LOGf("\tMulticast ttl     : %d\n", conf->multicast_ttl);
+		LOGf("\tRTP SSRC          : %u\n", conf->output->rtp_ssrc);
 		if (conf->syslog_active) {
-			printf("\tSyslog host       : %s\n", conf->loghost);
-			printf("\tSyslog port       : %d\n", conf->logport);
+			LOGf("\tSyslog host       : %s\n", conf->loghost);
+			LOGf("\tSyslog port       : %d\n", conf->logport);
 		} else {
-			printf("\tSyslog            : disabled\n");
+			LOGf("\tSyslog            : disabled\n");
 		}
-		printf("\tOutput bitrate    : %.0f bps, %.2f Kbps, %.2f Mbps\n", conf->output_bitrate, conf->output_bitrate / 1000, conf->output_bitrate / 1000000);
-		printf("\tOutput pkt tmout  : %ld us\n", conf->output_tmout);
-		printf("\tPackets per second: %ld\n", conf->output_packets_per_sec);
-		printf("\tPCR mode          : %s\n",
+		LOGf("\tOutput bitrate    : %.0f bps, %.2f Kbps, %.2f Mbps\n", conf->output_bitrate, conf->output_bitrate / 1000, conf->output_bitrate / 1000000);
+		LOGf("\tOutput pkt tmout  : %ld us\n", conf->output_tmout);
+		LOGf("\tPackets per second: %ld\n", conf->output_packets_per_sec);
+		LOGf("\tPCR mode          : %s\n",
 			conf->pcr_mode == 0 ? "Do not touch PCRs" :
 			conf->pcr_mode == 1 ? "Move PCRs to their calculated place" :
 			conf->pcr_mode == 2 ? "Rewrite PCRs using output bitrate" :
 			conf->pcr_mode == 3 ? "Move PCRs and rewrite them" : "???"
 		);
 		if (conf->write_output_file)
-			printf("\tWrite output file : %s\n", conf->output_filename);
+			LOGf("\tWrite output file : %s\n", conf->output_filename);
 		if (conf->write_input_file)
-			printf("\tWrite input file(s)\n");
-	}
+			LOGf("\tWrite input file(s)\n");
+	} else
+		LOGf("Quiet mode enabled.\n");
 
 	pthread_t sleepthread;
 	if (pthread_create(&sleepthread, NULL, &calibrate_sleep, conf) == 0) {
