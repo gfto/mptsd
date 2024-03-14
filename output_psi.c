@@ -44,40 +44,119 @@ static void output_psi_init_nit(CONFIG *conf, OUTPUT *o) {
 
 	ts_nit_add_network_name_descriptor(nit, conf->network_name);
 
-	if (conf->nit->items < 64) {
+	if (!conf->use_lcn) {
+
+		if (conf->nit->items < 64) {
+			int num;
+			LNODE *lc, *lctmp;
+			uint32_t *freqs = malloc(conf->nit->items * sizeof(uint32_t));
+			uint32_t *services = malloc(conf->channels->items * sizeof(uint32_t));
+
+			num = 0;
+			list_lock(conf->nit);
+			list_for_each(conf->nit, lc, lctmp) {
+				NIT *ndata = lc->data;
+				freqs[num++] = ndata->_freq;
+			}
+
+			ts_nit_add_frequency_list_descriptor_cable(nit, conf->transport_stream_id, conf->network_id, freqs, num);
+
+			list_for_each(conf->nit, lc, lctmp) {
+				NIT *ndata = lc->data;
+				ts_nit_add_cable_delivery_descriptor(nit, ndata->ts_id, conf->network_id, ndata->_freq, ndata->_modulation, ndata->_symbol_rate);
+			}
+			list_unlock(conf->nit);
+
+			num = 0;
+			list_lock(conf->channels);
+			list_for_each(conf->channels, lc, lctmp) {
+				CHANNEL *c = lc->data;
+				uint32_t srv = 0;
+				srv  = (c->service_id &~ 0x00ff) << 8;
+				srv |= (c->service_id &~ 0xff00) << 8;
+				srv |= c->radio ? 0x02 : 0x01;
+				services[num++] = srv;
+			}
+			list_unlock(conf->channels);
+
+			ts_nit_add_service_list_descriptor(nit, conf->transport_stream_id, conf->network_id, services, num);
+			free(freqs);
+			free(services);
+		} else {
+			LOG("CONF  : Too much items in the NIT, maximum is 64! NIT not generated.\n");
+		}
+
+	} else {
+
 		int num;
+		char *ts_freq = NULL;
+		char *ts_modulation = NULL;
+		char *ts_symbol_rate = NULL;
+		uint32_t ts__freq = 0;
+		uint8_t ts__modulation = 0;
+		uint32_t ts__symbol_rate = 0;
 		LNODE *lc, *lctmp;
-		uint32_t *freqs = malloc(conf->nit->items * sizeof(uint32_t));
-		uint32_t *services = malloc(conf->channels->items * sizeof(uint32_t));
-		num = 0;
+		uint32_t *svc_services = malloc(conf->channels->items * sizeof(uint32_t));
+		uint32_t *lcn_services = malloc(conf->channels->items * sizeof(uint32_t));
+
 		list_lock(conf->nit);
 		list_for_each(conf->nit, lc, lctmp) {
 			NIT *ndata = lc->data;
-			freqs[num++] = ndata->_freq;
-		}
-		ts_nit_add_frequency_list_descriptor_cable(nit, conf->transport_stream_id, conf->network_id, freqs, num);
-		list_for_each(conf->nit, lc, lctmp) {
-			NIT *ndata = lc->data;
-			ts_nit_add_cable_delivery_descriptor(nit, ndata->ts_id, conf->network_id, ndata->_freq, ndata->_modulation, ndata->_symbol_rate);
+			if (ndata->ts_id == conf->transport_stream_id) {
+				ts_freq = ndata->freq;
+				ts_modulation = ndata->modulation;
+				ts_symbol_rate = ndata->symbol_rate;
+				ts__freq = ndata->_freq;
+				ts__modulation = ndata->_modulation;
+				ts__symbol_rate = ndata->_symbol_rate;
+			}
 		}
 		list_unlock(conf->nit);
-		num = 0;
+
 		list_lock(conf->channels);
+		num = 0;
 		list_for_each(conf->channels, lc, lctmp) {
-			CHANNEL *c = lc->data;
-			uint32_t srv = 0;
-			srv  = (c->service_id &~ 0x00ff) << 8;
-			srv |= (c->service_id &~ 0xff00) << 8;
-			srv |= c->radio ? 0x02 : 0x01;
-			services[num++] = srv;
+				CHANNEL *c = lc->data;
+				uint32_t srv = 0;
+				srv  = (c->service_id &~ 0x00ff) << 16;
+				srv |= (c->service_id &~ 0xff00) << 16;
+				srv |= (c->lcn_visible ? 0x01 : 0x00 &~ 0xf0 ) << 15;
+				srv |= (0X00 &~ 0xf0 ) << 14;
+				srv |= (c->lcn &~ 0xc0ff);
+				srv |= (c->lcn &~ 0xff00);
+				lcn_services[num++] = srv;
+		}
+
+		num = 0;
+		list_for_each(conf->channels, lc, lctmp) {
+				CHANNEL *c = lc->data;
+				uint32_t srv = 0;
+				srv  = (c->service_id &~ 0x00ff) << 8;
+				srv |= (c->service_id &~ 0xff00) << 8;
+				srv |= c->radio ? 0x02 : 0x01;
+				svc_services[num++] = srv;
 		}
 		list_unlock(conf->channels);
-		ts_nit_add_service_list_descriptor(nit, conf->transport_stream_id, conf->network_id, services, num);
-		free(freqs);
-		free(services);
-	} else {
-		LOG("CONF  : Too much items in the NIT, maximum is 64! NIT not generated.\n");
+
+		NIT *ts_ndata = nit_new(conf->transport_stream_id, ts_freq, ts_modulation, ts_symbol_rate);
+		ts_nit_add_stream_descriptors(nit, ts_ndata->ts_id, conf->network_id, ts__freq, ts__modulation, ts__symbol_rate, lcn_services, svc_services, num);
+
+		if (conf->nit->items < 64) {
+			list_lock(conf->nit);
+				list_for_each(conf->nit, lc, lctmp) {
+				NIT *ndata = lc->data;
+				ts_nit_add_cable_delivery_descriptor(nit, ndata->ts_id, conf->network_id, ndata->_freq, ndata->_modulation, ndata->_symbol_rate);
+			}
+			list_unlock(conf->nit);
+
+			free(lcn_services);
+			free(svc_services);
+		} else {
+			LOG("CONF  : Too much items in the NIT, maximum is 64! NIT not generated.\n");
+		}
+
 	}
+
 	gettimeofday(&o->nit_ts, NULL);
 	o->nit = nit;
 }

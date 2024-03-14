@@ -121,7 +121,7 @@ void chansrc_set(CHANNEL *c, uint8_t src_id) {
 
 
 
-CHANNEL *channel_new(int service_id, int is_radio, const char *id, const char *name, int eit_mode, const char *source, int channel_index){
+CHANNEL *channel_new(int service_id, int is_radio, const char *id, const char *name, int eit_mode, const char *source, int channel_index, int lcn, int is_lcn_visible){
 
     if (channel_index<=0 || channel_index>=256)
     {
@@ -135,6 +135,8 @@ CHANNEL *channel_new(int service_id, int is_radio, const char *id, const char *n
 	c->service_id = service_id;
 	c->radio = is_radio;
 	c->index = channel_index;
+	c->lcn = lcn;
+	c->lcn_visible = is_lcn_visible;
 	c->base_pid = c->index * 32; // The first pid is saved for PMT , channel_index must > 0
 	c->pmt_pid = c->base_pid; // The first pid is saved for PMT
 	c->id = strdup(id);

@@ -118,6 +118,8 @@ int config_load_channels(CONFIG *conf) {
 			continue;
 
 		int is_radio = ini_get_bool(ini, 0, "Channel%d:radio", i);
+		int lcn = ini_get_int(ini, 0, "Channel%d:lcn", i);
+		int is_lcn_visible = ini_get_bool(ini, 0, "Channel%d:lcn_visible", i);
 
 		char *id = ini_get_string(ini, NULL, "Channel%d:id", i);
 		if (!id) {
@@ -145,7 +147,7 @@ int config_load_channels(CONFIG *conf) {
 				}
 				// Init channel
 				if (channel == NULL) {
-					channel = channel_new(service_id, is_radio, id, name, eit_mode, source, i);
+					channel = channel_new(service_id, is_radio, id, name, eit_mode, source, i, lcn, is_lcn_visible);
 				} else {
 					chansrc_add(channel, source);
 				}
@@ -225,7 +227,7 @@ int config_load_channels(CONFIG *conf) {
 		if (r->cookie != cookie) {
 			proxy_log(r, "Remove");
 			/* Replace channel reference with real object and instruct free_restreamer to free it */
-			r->channel = channel_new(r->channel->service_id, r->channel->radio, r->channel->id, r->channel->name, r->channel->eit_mode, r->channel->source, r->channel->index);
+			r->channel = channel_new(r->channel->service_id, r->channel->radio, r->channel->id, r->channel->name, r->channel->eit_mode, r->channel->source, r->channel->index, r->channel->lcn, r->channel->lcn_visible);
 			r->freechannel = 1;
 			r->dienow = 1;
 		}
@@ -450,6 +452,7 @@ static void show_usage(void) {
 	puts("\t-W\t\tWrite output file           (recommended to use with -N)");
 	puts("\t-f\t\tThe output filename         (default: mptsd-output.ts) (use - for stdout)");
 	puts("\t-E\t\tWrite input file");
+	puts("\t-9\t\tEnable LCN support          (default: disabled)");
 	puts("");
 }
 
@@ -466,7 +469,7 @@ void config_load(CONFIG *conf, int argc, char **argv) {
 	conf->server_socket = -1;
 	conf->write_output_network = 1;
 
-	while ((j = getopt(argc, argv, "i:b:p:g:c:n:e:d:t:o:O:P:l:L:B:m:s:f:qDHhEWN")) != -1) {
+	while ((j = getopt(argc, argv, "i:b:p:g:c:n:e:d:t:o:O:P:l:L:B:m:s:f:qDHhEWN9")) != -1) {
 		switch (j) {
 			case 'i':
 				conf->ident = strdup(optarg);
@@ -556,6 +559,9 @@ void config_load(CONFIG *conf, int argc, char **argv) {
 			case 'f':
 				conf->output_filename = strdup(optarg);
 				break;
+			case '9':
+				conf->use_lcn = 1;
+				break;
 			case 'D':
 				conf->debug = 1;
 				break;
@@ -638,6 +644,7 @@ void config_load(CONFIG *conf, int argc, char **argv) {
 			conf->pcr_mode == 2 ? "Rewrite PCRs using output bitrate" :
 			conf->pcr_mode == 3 ? "Move PCRs and rewrite them" : "???"
 		);
+		LOGf("\tLCN               : %s\n", (conf->use_lcn)? "enabled" : "disabled");
 		if (conf->write_output_file)
 			LOGf("\tWrite output file : %s\n", conf->output_filename);
 		if (conf->write_input_file)
