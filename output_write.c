@@ -125,7 +125,7 @@ ssize_t ts_frame_write(OUTPUT *o, uint8_t *data) {
 
 // write RTP packets
 ssize_t ts_frame_write_rtp(OUTPUT *o, uint8_t *data) {
-	ssize_t written;
+	ssize_t written, written2;
 	const size_t write_len = FRAME_PACKET_SIZE + RTP_HEADER_SIZE;
 	uint8_t rtp_buffer[write_len];
 
@@ -157,14 +157,17 @@ ssize_t ts_frame_write_rtp(OUTPUT *o, uint8_t *data) {
 	memcpy(&rtp_buffer[12], data, FRAME_PACKET_SIZE);
 
 	written = fdwrite(o->out_sock, (char *)rtp_buffer, write_len);
+	if (o->ofd)
+		written2 = write(o->ofd, data, FRAME_PACKET_SIZE);
+	else written2 = 0;
+
+	if (written2 > written)
+		written = written2 + RTP_HEADER_SIZE;
 	if (written >= RTP_HEADER_SIZE) {
 		written -= RTP_HEADER_SIZE;
 		o->traffic        += written;
 		o->traffic_period += written;
 	}
-
-	if (o->ofd)
-		write(o->ofd, data, FRAME_PACKET_SIZE);
 
 	o->rtp_sequence_number++; // increment RTP sequence number
 
