@@ -255,8 +255,8 @@ INPUT * input_new(const char *name, CHANNEL *channel) {
 	r->channel = channel;
 
 	if (config->write_input_file) {
-		asprintf(&tmp, "mptsd-input-%s.ts", channel->id);
-		r->ifd = open(tmp, O_CREAT | O_WRONLY | O_TRUNC, 0644);
+		if (asprintf(&tmp, "mptsd-input-%s.ts", channel->id) > 0)
+			r->ifd = open(tmp, O_CREAT | O_WRONLY | O_TRUNC, 0644);
 		FREE(tmp);
 	}
 

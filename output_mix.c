@@ -21,6 +21,7 @@
 #include <string.h>
 #include <signal.h>
 #include <errno.h>
+#include <limits.h>
 
 #include "libfuncs/libfuncs.h"
 
@@ -158,8 +159,9 @@ void * output_handle_mix(void *_config) {
 								// Calculate the required number of packets betweem this PCR and the last one
 								r->output_pcr_packets_needed = round((double)(conf->output_bitrate / 8 / 27000000 / 188) * (ts_packet_get_pcr(data) - r->output_last_pcr)) - 1;
 								// Check the boundaries
-								if (r->output_pcr_packets_needed > o_maxpackets)
-									r->output_pcr_packets_needed = o_maxpackets;
+								int bound = (o_maxpackets < (INT_MAX/2))? (unsigned int)o_maxpackets : (INT_MAX/2) ;
+								if (r->output_pcr_packets_needed > bound)
+									r->output_pcr_packets_needed = bound;
 								else if (r->output_pcr_packets_needed < 0)
 									r->output_pcr_packets_needed = 0;
 							}
