@@ -207,6 +207,8 @@ void * output_handle_write(void *_config) {
 			double out_mbps = (double)out_kbps / 1000;
 			double opadding = ((double)o->padding_period / o->traffic_period) * 100;
 
+			update_traffic_stats(&o->traffic_stats, out_kbps, opadding, o->traffic_period);
+
 			if (!conf->quiet) {
 				LOGf("STAT  : Pad:%6.2f%% Traf:%5.2f Mbps | %8.2f | %7" PRIu64 "\n",
 					opadding,
