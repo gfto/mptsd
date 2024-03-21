@@ -25,6 +25,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <stdarg.h>
 
 #include "libfuncs/io.h"
 #include "libfuncs/log.h"
@@ -121,7 +122,7 @@ void chansrc_set(CHANNEL *c, uint8_t src_id) {
 
 
 
-CHANNEL *channel_new(int service_id, int is_radio, const char *id, const char *name, int eit_mode, const char *source, int channel_index, int lcn, int is_lcn_visible){
+CHANNEL *channel_new(int service_id, int is_radio, const char *id, const char *name, int eit_mode, int corrupted_packets_mode, const char *source, int channel_index, int lcn, int is_lcn_visible){
 
     if (channel_index<=0 || channel_index>=256)
     {
@@ -142,6 +143,7 @@ CHANNEL *channel_new(int service_id, int is_radio, const char *id, const char *n
 	c->id = strdup(id);
 	c->name = strdup(name);
 	c->eit_mode = eit_mode;
+	c->corrupted_packets_mode = corrupted_packets_mode;
 	chansrc_add(c, source);
 
 
@@ -432,6 +434,17 @@ void nit_free(NIT **pn) {
 void proxy_log(INPUT *r, char *msg) {
 	if (!config->quiet)
 		LOGf("INPUT : [%-12s] %s fd: %d src: %s\n", r->channel->id, msg, r->sock, r->channel->source);
+}
+
+void proxy_logf(INPUT *r, const char *fmt, ...) {
+	char msg[1024];
+	va_list args;
+	va_start(args, fmt);
+	vsnprintf(msg, sizeof(msg) - 1, fmt, args);
+	va_end(args);
+	msg[sizeof(msg) - 1] = '\0';
+
+	proxy_log(r, msg);
 }
 
 void proxy_close(LIST *inputs, INPUT **input) {
