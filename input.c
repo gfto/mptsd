@@ -21,6 +21,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <string.h>
+#include <inttypes.h>
 
 #include "libfuncs/io.h"
 #include "libfuncs/log.h"
@@ -417,6 +418,7 @@ void * input_stream(void *self) {
 
 		ssize_t readen;
 		int max_zero_reads = MAX_ZERO_READS;
+		uint64_t corrupted_packets = 0;
 
 		// Reset all stream parameters on reconnect.
 		input_stream_reset(r);
@@ -462,6 +464,33 @@ void * input_stream(void *self) {
 				if (r->dienow)
 					goto QUIT;
 				uint8_t *ts_packet = (uint8_t *)buf + i;
+
+				// handle packets with Transport error indicator (TEI) set
+				if (r->channel->corrupted_packets_mode > 0) {
+					if (ts_packet_is_tei_set(ts_packet)) {
+						if (!corrupted_packets) {
+							r->corruption_stats.events++;
+							proxy_log(r, "corrupted package received");
+						}
+						if (corrupted_packets % 1000 == 0) {
+							proxy_logf(
+								r, "still getting corrupt input packets (%" PRIu64 ")",
+								corrupted_packets);
+						}
+						r->corruption_stats.count++;
+						corrupted_packets += 1;
+						if (r->channel->corrupted_packets_mode == 2) {
+							// drop corrupted TS packet
+							continue;
+						}
+					} else if (corrupted_packets) {
+						proxy_logf(r,
+								"corruption ended after %" PRIu64 " packets",
+								corrupted_packets);
+						corrupted_packets = 0;
+					}
+				}
+
 				uint16_t pid = ts_packet_get_pid(ts_packet);
 
 				int pat_result = process_pat(r, pid, ts_packet);
